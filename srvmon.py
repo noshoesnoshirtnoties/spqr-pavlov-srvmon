@@ -117,8 +117,8 @@ def run_srvmon(meta,config):
     logmsg(logfile,'debug','rconcmd: '+str(rconcmd))
     logmsg(logfile,'debug','rconparams: '+str(rconparams))
     conn=PavlovRCON(config['rconip'],config['rconport'],config['rconpass'])
-    for key,value in rconparams.items():
-      rconcmd=rconcmd+' '+value
+    for rconparam in rconparams:
+      rconcmd+=' '+rconparam
     data=await conn.send(rconcmd)
     data_json=json.dumps(data)
     data=json.loads(data_json)
