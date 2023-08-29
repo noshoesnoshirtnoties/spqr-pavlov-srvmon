@@ -17,6 +17,7 @@ script to monitor the spqr pavlov server, running as systemd service
   * mysql-connector
 
 ## todo (aside from finding and fixing bugs)
+* check ping min max
 * generate top ranks and write them to an updated message in #stats
 * extended playerstats
   * pull steamusers details
