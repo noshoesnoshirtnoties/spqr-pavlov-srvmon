@@ -399,7 +399,10 @@ def run_srvmon(meta,config):
 
       case 'Rcon: User':
         rconclient0=line.split(' authenticated ',2)
-        rconclient=rconclient0[1].strip()
+        if len(rconclient0)>1:
+          rconclient=rconclient0[1].strip()
+        else:
+          rconclient=rconclient0[0].strip()
         logmsg(logfile,'info','rcon client auth: '+rconclient)
 
       case 'SND: Waiting for players':
