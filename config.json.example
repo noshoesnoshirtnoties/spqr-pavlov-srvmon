@@ -1,0 +1,14 @@
+{
+  "live": {
+    "debug":false,
+    "logfile_path":"/home/steam/pavlovserver/Pavlov/Saved/Logs/Pavlov.log",
+    "rconip":"127.0.0.1",
+    "rconport":9100,
+    "rconpass":"supersecretpassword",
+    "mysqlhost":"127.0.0.1",
+    "mysqlport":3306,
+    "mysqldatabase":"somemysqldatabase",
+    "mysqluser":"somemysqluser",
+    "mysqlpass":"somemysqluserspassword"
+  }
+}

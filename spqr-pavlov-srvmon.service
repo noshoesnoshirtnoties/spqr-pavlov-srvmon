@@ -1,0 +1,14 @@
+[Unit]
+Description=spqr-pavlov-srvmon
+
+[Service]
+Type=simple
+WorkingDirectory=/home/steam/spqr-pavlov-srvmon
+ExecStart=/usr/bin/python3 main.py
+RestartSec=1
+Restart=always
+User=steam
+Group=steam
+
+[Install]
+WantedBy = multi-user.target
