@@ -67,7 +67,7 @@ def run_srvmon(meta,config):
       case _:
         logfile.debug(msg)
 
-  async def dbquery(config,logfile,query,values):
+  async def dbquery(config,query,values):
     logmsg(logfile,'debug','dbquery called')
     logmsg(logfile,'debug','query: '+str(query))
     logmsg(logfile,'debug','values: '+str(values))
