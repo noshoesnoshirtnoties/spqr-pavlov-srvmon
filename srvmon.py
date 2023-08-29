@@ -161,24 +161,32 @@ def run_srvmon(meta,config):
         params={}
         data=await rcon(config,command,params)
         serverinfo=data['ServerInfo']
+        numberofplayers0=serverinfo['PlayerCount'].split('/',2)
+        numberofplayers1=(numberofplayers0[0])
+        numberofplayers=(int(numberofplayers1)-1)
+        logmsg(logfile,'info','current number of players: '+str(numberofplayers))
 
-        if serverinfo['GameMode'].upper()=="SND": # only autopin in SND / demo rec counts as 1 in SND
-          numberofplayers0=serverinfo['PlayerCount'].split('/',2)
-          numberofplayers1=(numberofplayers0[0])
-          numberofplayers=(int(numberofplayers1)-1)
-          logmsg(logfile,'info','current number of players: '+str(numberofplayers))
-
+        if serverinfo['GameMode'].upper()=="SND":
           limit=10
-          if int(numberofplayers)>=limit:
-            logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
-            command='SetPin'
-            params={'9678'}
-            data=await rcon(config,command,params)
-          else:
-            logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
-            command='SetPin'
-            params={''}
-            data=await rcon(config,command,params)
+        elif serverinfo['GameMode'].upper()=="TDM":
+          if serverinfo['MapLabel']=="UGC2814848": # aimmap
+            limit=8
+        elif serverinfo['GameMode'].upper()=="DM":
+          if serverinfo['MapLabel']=="UGC3037601": # poolday
+            limit=5
+        else:
+          limit=10
+        
+        if int(numberofplayers)>=limit:
+          logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
+          command='SetPin'
+          params={'9678'}
+          data=await rcon(config,command,params)
+        else:
+          logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
+          command='SetPin'
+          params={''}
+          data=await rcon(config,command,params)
       case 'autokickhighping':
         logmsg(logfile,'info','autokickhighping called')
         command='InspectAll'
