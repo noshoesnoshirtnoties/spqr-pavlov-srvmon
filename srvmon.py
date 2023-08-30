@@ -264,7 +264,8 @@ def run_srvmon(meta,config):
         logmsg(logfile,'info','pullstats called')
         serverinfo=await get_serverinfo()
 
-        if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
+        #if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
+        if True is True: # for debugging
             logmsg(logfile,'info','actually pulling stats now')
             data=await rcon('InspectAll',{})
             inspectlist=data['InspectList']
@@ -318,12 +319,12 @@ def run_srvmon(meta,config):
                 query+=") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                 values=[
                     steamuserid,kills,deaths,average,score,ping,serverinfo['ServerName'],serverinfo['PlayerCount'],
-                    serverinfo['MapLabel'],serverinfo['GameMode'],matchended,serverinfo['Teams'],
+                    serverinfo['MapLabel'],serverinfo['GameMode'],serverinfo['MatchEnded'],serverinfo['Teams'],
                     serverinfo['Team0Score'],serverinfo['Team1Score'],timestamp]
                 data=dbquery(query,values)
             logmsg(logfile,'info','processed all current players')
         else:
-          logmsg(logfile,'info','not pulling stats')
+            logmsg(logfile,'info','not pulling stats')
 
     # decide what to do once a keyword appears
     def process_keyword(line,keyword):
@@ -336,23 +337,22 @@ def run_srvmon(meta,config):
                     logmsg(logfile,'info','map switch called')
                 elif '/Game/Maps/download.download' in line:
                     mapugc0=line.split('UGC',1)
-                    mapugc1=('UGC'+mapugc0[1])
-                    mapugc=mapugc1.strip()
-                    logmsg(logfile,'info','map is being downloaded: '+mapugc)
+                    mapugc=('UGC'+str(mapugc0[1]))
+                    logmsg(logfile,'info','map is being downloaded: '+str(mapugc))
                 elif 'LoadMap: /UGC' in line:
                     mapugc0=line.split('LoadMap: /',1)
                     mapugc1=mapugc0[1].split("/",1)
-                    mapugc=mapugc1[0].strip()
+                    mapugc=mapugc1[0]
                     gamemode0=line.split('game=',1)
-                    gamemode=gamemode0[1].strip()
-                    logmsg(logfile,'info','custom map is loading: '+mapugc+' as '+gamemode)
+                    gamemode=gamemode0[1]
+                    logmsg(logfile,'info','custom map is loading: '+str(mapugc).strip()+' as '+str(gamemode)).strip()
                 elif '/Game/Maps' in line:
                     mapugc0=line.split('Maps/',1)
                     mapugc1=mapugc0[1].split("/",1)
-                    mapugc=mapugc1[0].strip()
+                    mapugc=mapugc1[0]
                     gamemode0=line.split('game=',1)
-                    gamemode=gamemode0[1].strip()
-                    logmsg(logfile,'info','vrankrupt map is loading: '+mapugc+' as '+gamemode)
+                    gamemode=gamemode0[1]
+                    logmsg(logfile,'info','vrankrupt map is loading: '+str(mapugc).strip()+' as '+str(gamemode)).strip()
 
             case 'Updating blacklist':
                 logmsg(logfile,'info','access configs reloaded')
@@ -363,8 +363,8 @@ def run_srvmon(meta,config):
             case '"State":':
                 roundstate0=line.split('": "',1)
                 roundstate1=roundstate0[1].split('"',1)
-                roundstate=roundstate1[0].strip()
-                logmsg(logfile,'info','round state changed to: '+roundstate)
+                roundstate=roundstate1[0]
+                logmsg(logfile,'info','round state changed to: '+str(roundstate).strip())
                 match roundstate:
                     case 'Starting':
                         asyncio.run(action_serverinfo())
@@ -389,10 +389,10 @@ def run_srvmon(meta,config):
             case 'Rcon: User':
                 rconclient0=line.split(' authenticated ',2)
                 if len(rconclient0)>1:
-                    rconclient=rconclient0[1].strip()
+                    rconclient=rconclient0[1]
                 else:
-                    rconclient=rconclient0[0].strip()
-                logmsg(logfile,'info','rcon client auth: '+rconclient)
+                    rconclient=rconclient0[0]
+                logmsg(logfile,'info','rcon client auth: '+str(rconclient).strip())
 
             case 'SND: Waiting for players':
                 logmsg(logfile,'info','waiting for players')
@@ -407,59 +407,60 @@ def run_srvmon(meta,config):
                 loginid0=line.split('NULL:',2)
                 loginid1=loginid0[1].split(' ',2)
                 loginid=loginid1[0]
-                logmsg(logfile,'info','login request from user: '+str(loginuser)+' ('+loginid+')')
+                logmsg(logfile,'info','login request from user: '+str(loginuser).strip()+' ('+str(loginid).strip()+')')
 
             case 'Client netspeed':
                 netspeed0=line.split('Client netspeed is ',2)
                 netspeed=netspeed0[1]
-                logmsg(logfile,'info','client netspeed: '+netspeed.strip())
+                logmsg(logfile,'info','client netspeed: '+str(netspeed).strip())
 
             case 'Join request':
                 joinuser0=line.split('?name=',2)
                 joinuser1=joinuser0[1].split('?',2)
                 joinuser=joinuser1[0]
-                logmsg(logfile,'info','join request from user: '+str(joinuser))
+                logmsg(logfile,'info','join request from user: '+str(joinuser).strip())
 
             case 'Join succeeded':
                 joinuser0=line.split('succeeded: ',2)
                 joinuser=joinuser0[1]
-                logmsg(logfile,'info','join successful for user: '+str(joinuser.strip()))
+                logmsg(logfile,'info','join successful for user: '+str(joinuser).strip())
 
             case 'LogNet: UChannel::Close':
                 leaveuser0=line.split('RemoteAddr: ',2)
                 leaveuser1=leaveuser0[1].split(',',2)
                 leaveuser=leaveuser1[0]
-                logmsg(logfile,'info',' user left the server: '+str(leaveuser))
+                logmsg(logfile,'info',' user left the server: '+str(leaveuser).strip())
 
             case '"KillData":':
                 logmsg(logfile,'info','a player died...')
+                asyncio.run(action_autokickhighping())
 
             case '"Killer":':
                 killer0=line.split('"',4)
                 killer=killer0[3]
-                logmsg(logfile,'info','killer: '+str(killer))
+                logmsg(logfile,'info','killer: '+str(killer).strip())
 
             case '"KillerTeamID":':
                 killerteamid0=line.split('": ',2)
                 killerteamid1=killerteamid0[1].split(',',2)
                 killerteamid=killerteamid1[0]
-                logmsg(logfile,'info','killerteamid: '+killerteamid)
+                logmsg(logfile,'info','killerteamid: '+str(killerteamid).strip())
 
             case '"Killed":':
                 killed0=line.split('"',4)
                 killed=killed0[3]
-                logmsg(logfile,'info','killed: '+str(killed))
+                logmsg(logfile,'info','killed: '+str(killed).strip())
 
             case '"KilledTeamID":':
                 killedteamid0=line.split('": ',2)
                 killedteamid1=killedteamid0[1].split(',',2)
                 killedteamid=killedteamid1[0]
-                logmsg(logfile,'info','killedteamid: '+killedteamid)
+                logmsg(logfile,'info','killedteamid: '+str(killedteamid).strip())
 
             case '"KilledBy":':
                 killedby0=line.split('"',4)
                 killedby=killedby0[3]
-                logmsg(logfile,'info','killedby: '+killedby)
+                logmsg(logfile,'info','killedby: '+str(killedby).strip())
 
             case '"Headshot":':
                 headshot0=line.split('": ',2)
@@ -469,34 +470,35 @@ def run_srvmon(meta,config):
             case 'LogTemp: Rcon: KickPlayer':
                 kickplayer0=line.split('KickPlayer ',2)
                 kickplayer=kickplayer0[1]
-                logmsg(logfile,'info','player kicked: '+kickplayer.strip())
+                logmsg(logfile,'info','player kicked: '+str(kickplayer).strip())
 
             case 'LogTemp: Rcon: BanPlayer':
                 banplayer0=line.split('BanPlayer ',2)
                 banplayer=banplayer0[1]
-                logmsg(logfile,'info','player banned: '+banplayer.strip())
+                logmsg(logfile,'info','player banned: '+str(banplayer).strip())
 
             case 'BombData':
                 logmsg(logfile,'info','something happened with the bomb')
+                asyncio.run(action_autokickhighping())
 
             case '"Player":':
                 bombplayer0=line.split('": "',2)
                 bombplayer1=bombplayer0[1].split('"',2)
                 bombplayer=bombplayer1[0]
-                logmsg(logfile,'info','player interacted with bomb: '+bombplayer)
+                logmsg(logfile,'info','player interacted with bomb: '+str(bombplayer).strip())
 
             case '"BombInteraction":':
                 bombinteraction0=line.split('": "',2)
                 bombinteraction1=bombinteraction0[1].split('"',2)
                 bombinteraction=bombinteraction1[0]
-                logmsg(logfile,'info','bomb interaction: '+ bombinteraction)
+                logmsg(logfile,'info','bomb interaction: '+ str(bombinteraction).strip())
 
     # find relevant keywords in target log
     def find_keywords(line,keywords):
         for keyword in keywords:
             if keyword in line:
-                logmsg(logfile,'debug','original line: '+line.strip())
-                logmsg(logfile,'debug','matched keyword: '+keyword)
+                logmsg(logfile,'debug','original line: '+str(line).strip())
+                logmsg(logfile,'debug','matched keyword: '+str(keyword).strip())
                 process_keyword(line,keyword)
 
     # continously read from the target log
