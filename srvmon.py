@@ -229,7 +229,7 @@ def run_srvmon(meta,config):
             logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
             logmsg(logfile,'debug','min_ping: '+str(min_ping))
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
-            minentries=5
+            minentries=10
             if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
                 logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
                 pinglimit=59
