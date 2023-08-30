@@ -10,7 +10,6 @@ import mysql.connector
 from datetime import datetime,timezone
 
 def run_srvmon(meta,config):
-    # set vars
     keywords=[
         'Rotating map',
         'LogLoad: LoadMap',
@@ -41,7 +40,6 @@ def run_srvmon(meta,config):
         '"Player":',
         '"BombInteraction":']
 
-    # init logging
     if bool(config['debug'])==True:
         level=logging.DEBUG
     else:
@@ -54,7 +52,6 @@ def run_srvmon(meta,config):
         level=level)
     logfile=logging.getLogger('logfile')
 
-    # def funcs
     def logmsg(logfile,lvl,msg):
         lvl=lvl.lower()
         match lvl:
@@ -67,7 +64,6 @@ def run_srvmon(meta,config):
             case _:
                 logfile.debug(msg)
 
-    # query database
     def dbquery(query,values):
         logmsg(logfile,'debug','dbquery called')
         logmsg(logfile,'debug','query: '+str(query))
@@ -113,7 +109,6 @@ def run_srvmon(meta,config):
         logmsg(logfile,'debug','conn and conn closed')
         return data
 
-    # use pavrlovcon
     async def rcon(rconcmd,rconparams):
         logmsg(logfile,'debug','rcon called')
         logmsg(logfile,'debug','rconcmd: '+str(rconcmd))
@@ -128,7 +123,6 @@ def run_srvmon(meta,config):
         await conn.send('Disconnect')
         return data
 
-    # get serverinfo via rcon
     async def get_serverinfo():
         logmsg(logfile,'info','get_serverinfo called')
         data=await rcon('ServerInfo',{})
@@ -157,9 +151,13 @@ def run_srvmon(meta,config):
             if int(serverinfo['Team1Score'])==10:
                 serverinfo['MatchEnded']=True
                 serverinfo['WinningTeam']='team1'
+        else:
+            serverinfo['Team0Score']=0
+            serverinfo['Team1Score']=0
         if serverinfo['MatchEnded'] is True:
             logmsg(logfile,'info','end of match detected')
-            logmsg(logfile,'info','winning team: '+str(serverinfo['WinningTeam']))
+            logmsg(logfile,'info','team0score: '+str(serverinfo['Team0Score']))
+            logmsg(logfile,'info','team1score: '+str(serverinfo['Team1Score']))
 
         return serverinfo
 
