@@ -338,21 +338,21 @@ def run_srvmon(meta,config):
                 elif '/Game/Maps/download.download' in line:
                     mapugc0=line.split('UGC',1)
                     mapugc=('UGC'+str(mapugc0[1]))
-                    logmsg(logfile,'info','map is being downloaded: '+str(mapugc))
+                    logmsg(logfile,'info','map is being downloaded: '+str(mapugc).strip())
                 elif 'LoadMap: /UGC' in line:
                     mapugc0=line.split('LoadMap: /',1)
                     mapugc1=mapugc0[1].split("/",1)
                     mapugc=mapugc1[0]
                     gamemode0=line.split('game=',1)
                     gamemode=gamemode0[1]
-                    logmsg(logfile,'info','custom map is loading: '+str(mapugc).strip()+' as '+str(gamemode)).strip()
+                    logmsg(logfile,'info','custom map is loading: '+str(mapugc).strip()+' as '+str(gamemode).strip())
                 elif '/Game/Maps' in line:
                     mapugc0=line.split('Maps/',1)
                     mapugc1=mapugc0[1].split("/",1)
                     mapugc=mapugc1[0]
                     gamemode0=line.split('game=',1)
                     gamemode=gamemode0[1]
-                    logmsg(logfile,'info','vrankrupt map is loading: '+str(mapugc).strip()+' as '+str(gamemode)).strip()
+                    logmsg(logfile,'info','vrankrupt map is loading: '+str(mapugc).strip()+' as '+str(gamemode).strip())
 
             case 'Updating blacklist':
                 logmsg(logfile,'info','access configs reloaded')
