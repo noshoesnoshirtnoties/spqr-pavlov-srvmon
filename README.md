@@ -23,5 +23,5 @@ script to monitor the spqr pavlov server, running as systemd service
   * pull steamusers details
 * ace-detection for playerstats
 * create logrotate config for the log file
-* make env (main.py) a param
+* make env (main.py + generate-ranks.cron.py) a param
 * remove requirement to access the server as root (deploy.sh)
