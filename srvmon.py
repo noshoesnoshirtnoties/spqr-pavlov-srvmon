@@ -231,6 +231,8 @@ def run_srvmon(meta,config):
                     delete_data=True
                 else:
                     logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') min ping: '+str(int(min_ping)))
+                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') max ping: '+str(int(max_ping)))
                 if cnt_ping>=100:
                     delete_data=True
             else:
@@ -255,14 +257,12 @@ def run_srvmon(meta,config):
                 values=[str(player['UniqueId']),player['Ping'],timestamp]
                 dbquery(query,values)
 
-
     # pull stats
     async def action_pullstats():
         logmsg(logfile,'info','pullstats called')
         serverinfo=await get_serverinfo()
 
-        if True is True: # for debugging
-        #if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
+        if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
             logmsg(logfile,'info','actually pulling stats now')
             data=await rcon('InspectAll',{})
             inspectlist=data['InspectList']

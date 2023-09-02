@@ -2,7 +2,6 @@ import json
 import mysql.connector
 
 if __name__ == '__main__':
-    # define env - should be an argument with default value later on
     env='live'
 
     # read config
@@ -45,7 +44,7 @@ if __name__ == '__main__':
     query+=",MIN(kills) as min_kills,MIN(deaths) as min_deaths,MIN(average) as min_average,MIN(score) as min_score,MIN(ping) as min_ping"
     query+=",MAX(kills) as max_kills,MAX(deaths) as max_deaths,MAX(average) as max_average,MAX(score) as max_score,MAX(ping) as max_ping"
     query+=" FROM stats WHERE gamemode='SND' "
-    #query+="AND matchended IS TRUE AND playercount>9 "
+    query+="AND matchended IS TRUE AND playercount=10 "
     query+="ORDER BY timestamp ASC"
     values=[]
     all_stats=dbquery(query,values)
@@ -69,7 +68,7 @@ if __name__ == '__main__':
             query+=",MIN(kills) as min_kills,MIN(deaths) as min_deaths,MIN(average) as min_average,MIN(score) as min_score,MIN(ping) as min_ping"
             query+=",MAX(kills) as max_kills,MAX(deaths) as max_deaths,MAX(average) as max_average,MAX(score) as max_score,MAX(ping) as max_ping"
             query+=" FROM stats WHERE gamemode='SND' AND steamusers_id=%s "
-            #query+="AND matchended IS TRUE AND playercount>9 "
+            query+="AND matchended IS TRUE AND playercount=10 "
             query+="ORDER BY timestamp ASC"
             values=[]
             values.append(steamuser_id)
@@ -77,7 +76,7 @@ if __name__ == '__main__':
             print('[DEBUG] player_stats: '+str(player_stats))
 
             query="SELECT id FROM stats WHERE gamemode='SND' AND steamusers_id=%s "
-            #query+="AND matchended IS TRUE AND playercount>9 "
+            query+="AND matchended IS TRUE AND playercount=10 "
             query+="ORDER BY timestamp ASC"
             values=[]
             values.append(steamuser_id)
@@ -125,7 +124,7 @@ if __name__ == '__main__':
 
                 # prevent divison by 0
                 if all_max_score<1: all_max_score=1
-                if all_max_average<1: all_max_average=1
+                if all_max_average<1: all_max_average=0.1
 
                 relative_score=10*player_max_score/all_max_score
                 relative_average=10*player_max_average/all_max_average
