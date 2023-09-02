@@ -217,6 +217,7 @@ def run_srvmon(meta,config):
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
             logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(player['UniqueId']))
 
+            delete_data=False
             minentries=10
             if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
                 logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
@@ -224,28 +225,36 @@ def run_srvmon(meta,config):
                 logmsg(logfile,'debug','checking wether limit has been reached or not for player: '+str(player['UniqueId']))
                 if int(avg_ping)>pinglimit:
                     logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') min ping: '+str(int(min_ping)))
+                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') max ping: '+str(int(max_ping)))
                     await rcon('Kick',{str(player['UniqueId'])})
+                    delete_data=True
                 else:
                     logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
-
-                logmsg(logfile,'debug','deleting entries for player in pings db')
-                query="DELETE FROM pings WHERE steamid64 = %s"
-                values=[]
-                values.append(str(player['UniqueId']))
-                dbquery(query,values)
+                if cnt_ping>=100:
+                    delete_data=True
             else:
                 logmsg(logfile,'debug','not enough data on pings yet')
 
             if str(player['Ping'])=='0': # not sure yet what these are
                 logmsg(logfile,'debug','ping is 0 - now set to 1234 for debugging purposes')
                 player['Ping']=1234
-            logmsg(logfile,'debug','adding entry for user in pings entry')
-            timestamp=datetime.now(timezone.utc)            
-            query="INSERT INTO pings ("
-            query+="steamid64,ping,timestamp"
-            query+=") VALUES (%s,%s,%s)"
-            values=[str(player['UniqueId']),player['Ping'],timestamp]
-            dbquery(query,values)
+
+            if delete_data:
+                logmsg(logfile,'debug','deleting entries for player in pings db')
+                query="DELETE FROM pings WHERE steamid64 = %s"
+                values=[]
+                values.append(str(player['UniqueId']))
+                dbquery(query,values)
+            else:
+                logmsg(logfile,'debug','adding entry for user in pings db')
+                timestamp=datetime.now(timezone.utc)            
+                query="INSERT INTO pings ("
+                query+="steamid64,ping,timestamp"
+                query+=") VALUES (%s,%s,%s)"
+                values=[str(player['UniqueId']),player['Ping'],timestamp]
+                dbquery(query,values)
+
 
     # pull stats
     async def action_pullstats():
@@ -385,13 +394,13 @@ def run_srvmon(meta,config):
                     rconclient=rconclient0[1]
                 else:
                     rconclient=rconclient0[0]
-                logmsg(logfile,'info','rcon client auth: '+str(rconclient).strip())
+                logmsg(logfile,'debug','rcon client auth: '+str(rconclient).strip())
 
             case 'SND: Waiting for players':
                 logmsg(logfile,'info','waiting for players')
 
             case 'long time between ticks':
-                logmsg(logfile,'info','long tick detected')
+                logmsg(logfile,'warn','long tick detected')
 
             case 'Login request':
                 loginuser0=line.split(' ?Name=',2)
@@ -405,7 +414,7 @@ def run_srvmon(meta,config):
             case 'Client netspeed':
                 netspeed0=line.split('Client netspeed is ',2)
                 netspeed=netspeed0[1]
-                logmsg(logfile,'info','client netspeed: '+str(netspeed).strip())
+                logmsg(logfile,'debug','client netspeed: '+str(netspeed).strip())
 
             case 'Join request':
                 joinuser0=line.split('?name=',2)
