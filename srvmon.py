@@ -95,44 +95,6 @@ def run_srvmon(meta,config):
         #print('[DEBUG] conn and conn closed')
         return data
 
-    #def dbquery(query,values):
-    #    logmsg(logfile,'debug','dbquery called')
-    #    logmsg(logfile,'debug','query: '+str(query))
-    #    logmsg(logfile,'debug','values: '+str(values))
-    #    logmsg(logfile,'debug','len(values): '+str(len(values)))
-    #    conn=mysql.connector.connect(
-    #        host=config['mysqlhost'],
-    #        port=config['mysqlport'],
-    #        user=config['mysqluser'],
-    #        password=config['mysqlpass'],
-    #        database=config['mysqldatabase'])
-    #    logmsg(logfile,'debug','conn: '+str(conn))
-    #    cursor=conn.cursor(buffered=True)
-    #    cursor.execute(query,(values))
-    #    conn.commit()
-    #    data={}
-    #    data['rowcount']=cursor.rowcount
-    #    logmsg(logfile,'debug','data[rowcount]: '+str(data['rowcount']))
-    #    query_type0=query.split(' ',2)
-    #    query_type=str(query_type0[0])
-    #    logmsg(logfile,'debug','query_type: '+query_type)
-    #    if query_type.upper()=="SELECT":
-    #        rows=cursor.fetchall()
-    #        logmsg(logfile,'debug','rows: '+str(rows))
-    #        i=0
-    #        data['rows']={}
-    #        for row in rows:
-    #            logmsg(logfile,'debug','row: '+str(row))
-    #            data['rows'][i]=row
-    #            i+=1
-    #    else:
-    #        data['rows']=False
-    #    logmsg(logfile,'debug','data: '+str(data))
-    #    cursor.close()
-    #    conn.close()
-    #    logmsg(logfile,'debug','conn and conn closed')
-    #    return data
-
     async def rcon(rconcmd,rconparams):
         logmsg(logfile,'debug','rcon called')
         logmsg(logfile,'debug','rconcmd: '+str(rconcmd))
