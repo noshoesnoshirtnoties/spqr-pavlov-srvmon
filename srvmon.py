@@ -135,7 +135,10 @@ def run_srvmon(meta,config):
         if serverinfo['GameMode']=="SND":
             numberofplayers0=serverinfo['PlayerCount'].split('/',2)
             numberofplayers1=numberofplayers0[0]
-            numberofplayers2=(int(numberofplayers1)-1)
+            if int(numberofplayers1)>0: # demo only exists if there is a player?
+                numberofplayers2=(int(numberofplayers1)-1)
+            else:
+                numberofplayers2=(numberofplayers0[0])
             maxplayers=numberofplayers0[1]
             numberofplayers=str(numberofplayers2)+'/'+str(maxplayers)
         else:
@@ -175,7 +178,7 @@ def run_srvmon(meta,config):
             logmsg(logfile,'info','team0score:  '+str(serverinfo['Team0Score']))
             logmsg(logfile,'info','team1score:  '+str(serverinfo['Team1Score']))
 
-    # set pin depending on map, playercount and gamemode
+    # set/unset pin depending on map, playercount and gamemode
     async def action_autopin():
         logmsg(logfile,'info','action_autopin called')
         serverinfo=await get_serverinfo()
@@ -223,20 +226,21 @@ def run_srvmon(meta,config):
             min_ping=data['rows'][0][3]
             max_ping=data['rows'][0][4]
             cnt_ping=data['rows'][0][5]
-            logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(player['UniqueId']))
             logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
             logmsg(logfile,'debug','min_ping: '+str(min_ping))
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
+            logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(player['UniqueId']))
+
             minentries=10
             if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
                 logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
                 pinglimit=59
                 logmsg(logfile,'debug','checking wether limit has been reached or not for player: '+str(player['UniqueId']))
                 if int(avg_ping)>pinglimit:
-                    logmsg(logfile,'info','player ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
                     await rcon('Kick',{str(player['UniqueId'])})
                 else:
-                    logmsg(logfile,'info','player ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
 
                 logmsg(logfile,'debug','deleting entries for player in pings db')
                 query="DELETE FROM pings WHERE steamid64 = %s"
@@ -247,7 +251,7 @@ def run_srvmon(meta,config):
                 logmsg(logfile,'debug','not enough data on pings yet')
 
             if str(player['Ping'])=='0': # not sure yet what these are
-                logmsg(logfile,'debug','ping is 0 - now set to 12345 for debugging purposes')
+                logmsg(logfile,'debug','ping is 0 - now set to 1234 for debugging purposes')
                 player['Ping']=1234
             logmsg(logfile,'debug','adding entry for user in pings entry')
             timestamp=datetime.now(timezone.utc)            
@@ -262,8 +266,8 @@ def run_srvmon(meta,config):
         logmsg(logfile,'info','pullstats called')
         serverinfo=await get_serverinfo()
 
-        #if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
         if True is True: # for debugging
+        #if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
             logmsg(logfile,'info','actually pulling stats now')
             data=await rcon('InspectAll',{})
             inspectlist=data['InspectList']
@@ -325,7 +329,7 @@ def run_srvmon(meta,config):
             logmsg(logfile,'info','not pulling stats')
 
     # decide what to do once a keyword appears
-    def process_keyword(line,keyword):
+    def process_found_keyword(line,keyword):
         match keyword:
             case 'Rotating map':
                 logmsg(logfile,'info','map rotation called')
@@ -427,7 +431,7 @@ def run_srvmon(meta,config):
                 leaveuser0=line.split('RemoteAddr: ',2)
                 leaveuser1=leaveuser0[1].split(',',2)
                 leaveuser=leaveuser1[0]
-                logmsg(logfile,'info',' user left the server: '+str(leaveuser).strip())
+                logmsg(logfile,'info','user left the server: '+str(leaveuser).strip())
 
             case '"KillData":':
                 logmsg(logfile,'info','a player died...')
@@ -492,12 +496,12 @@ def run_srvmon(meta,config):
                 logmsg(logfile,'info','bomb interaction: '+ str(bombinteraction).strip())
 
     # find relevant keywords in target log
-    def find_keywords(line,keywords):
+    def find_keyword_in_line(line,keywords):
         for keyword in keywords:
             if keyword in line:
                 logmsg(logfile,'debug','original line: '+str(line).strip())
                 logmsg(logfile,'debug','matched keyword: '+str(keyword).strip())
-                process_keyword(line,keyword)
+                return keyword
 
     # continously read from the target log
     def follow_log(target_log):
@@ -527,5 +531,7 @@ def run_srvmon(meta,config):
     logmsg(logfile,'info','starting to read from the target log file...')
     loglines=follow_log(config['logfile_path'])
     for line in loglines:
-        if line != "":
-            find_keywords(line,keywords)
+        if line!="":
+            found_keyword=find_keyword_in_line(line,keywords)
+            if found_keyword!='':
+                process_found_keyword(line,found_keyword)
