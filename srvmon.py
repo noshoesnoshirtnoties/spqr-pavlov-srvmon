@@ -65,49 +65,73 @@ def run_srvmon(meta,config):
                 logfile.debug(msg)
 
     def dbquery(query,values):
-        logmsg(logfile,'debug','dbquery called')
-        logmsg(logfile,'debug','query: '+str(query))
-        logmsg(logfile,'debug','values: '+str(values))
-        logmsg(logfile,'debug','len(values): '+str(len(values)))
+        #print('[DEBUG] dbquery called')
+        #print('[DEBUG] query: '+str(query))
+        #print('[DEBUG] values: '+str(values))
+        #print('[DEBUG] len(values): '+str(len(values)))
         conn=mysql.connector.connect(
             host=config['mysqlhost'],
             port=config['mysqlport'],
             user=config['mysqluser'],
             password=config['mysqlpass'],
             database=config['mysqldatabase'])
-        logmsg(logfile,'debug','conn: '+str(conn))
-        cursor=conn.cursor(buffered=True)
+        #print('[DEBUG] conn: '+str(conn))
+        cursor=conn.cursor(buffered=True,dictionary=True)
         cursor.execute(query,(values))
         conn.commit()
         data={}
         data['rowcount']=cursor.rowcount
-        logmsg(logfile,'debug','data[rowcount]: '+str(data['rowcount']))
         query_type0=query.split(' ',2)
         query_type=str(query_type0[0])
-        logmsg(logfile,'debug','query_type: '+query_type)
+        #print('[DEBUG] query_type: '+query_type)
+
         if query_type.upper()=="SELECT":
-            rows=cursor.fetchall()
-            logmsg(logfile,'debug','rows: '+str(rows))
-            i=0
-            data['rows']={}
-            for row in rows:
-                logmsg(logfile,'debug','row: '+str(row))
-                data['rows'][0]=row
-                i+=1
-            i=0
-            data['values']={}
-            for value in cursor:
-                logmsg(logfile,'debug','value: '+str(value))
-                data['values'][0]=format(value)
-                i+=1
+            data['rows']=cursor.fetchall()
+            print('[DEBUG] data[rows]: '+str(data['rows']))
         else:
             data['rows']=False
-            data['values']=False
-        logmsg(logfile,'debug','data: '+str(data))
         cursor.close()
         conn.close()
-        logmsg(logfile,'debug','conn and conn closed')
+        #print('[DEBUG] conn and conn closed')
         return data
+
+    #def dbquery(query,values):
+    #    logmsg(logfile,'debug','dbquery called')
+    #    logmsg(logfile,'debug','query: '+str(query))
+    #    logmsg(logfile,'debug','values: '+str(values))
+    #    logmsg(logfile,'debug','len(values): '+str(len(values)))
+    #    conn=mysql.connector.connect(
+    #        host=config['mysqlhost'],
+    #        port=config['mysqlport'],
+    #        user=config['mysqluser'],
+    #        password=config['mysqlpass'],
+    #        database=config['mysqldatabase'])
+    #    logmsg(logfile,'debug','conn: '+str(conn))
+    #    cursor=conn.cursor(buffered=True)
+    #    cursor.execute(query,(values))
+    #    conn.commit()
+    #    data={}
+    #    data['rowcount']=cursor.rowcount
+    #    logmsg(logfile,'debug','data[rowcount]: '+str(data['rowcount']))
+    #    query_type0=query.split(' ',2)
+    #    query_type=str(query_type0[0])
+    #    logmsg(logfile,'debug','query_type: '+query_type)
+    #    if query_type.upper()=="SELECT":
+    #        rows=cursor.fetchall()
+    #        logmsg(logfile,'debug','rows: '+str(rows))
+    #        i=0
+    #        data['rows']={}
+    #        for row in rows:
+    #            logmsg(logfile,'debug','row: '+str(row))
+    #            data['rows'][i]=row
+    #            i+=1
+    #    else:
+    #        data['rows']=False
+    #    logmsg(logfile,'debug','data: '+str(data))
+    #    cursor.close()
+    #    conn.close()
+    #    logmsg(logfile,'debug','conn and conn closed')
+    #    return data
 
     async def rcon(rconcmd,rconparams):
         logmsg(logfile,'debug','rcon called')
@@ -215,26 +239,26 @@ def run_srvmon(meta,config):
             query+="AVG(ping) as avg_ping,"
             query+="MIN(ping) as min_ping,"
             query+="MAX(ping) as max_ping,"
-            query+="COUNT(id) as cnt_id "
+            query+="COUNT(id) as cnt_ping "
             query+="FROM pings "
             query+="WHERE steamid64 = %s"
             values=[]
             values.append(str(player['UniqueId']))
             data=dbquery(query,values)
 
-            avg_ping=data['rows'][0][2]
-            min_ping=data['rows'][0][3]
-            max_ping=data['rows'][0][4]
-            cnt_ping=data['rows'][0][5]
+            avg_ping=data['rows'][0]['avg_ping']
+            min_ping=data['rows'][0]['min_ping']
+            max_ping=data['rows'][0]['max_ping']
+            cnt_ping=data['rows'][0]['cnt_ping']
             logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
             logmsg(logfile,'debug','min_ping: '+str(min_ping))
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
             logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(player['UniqueId']))
 
-            minentries=15
+            minentries=10
             if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
                 logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
-                pinglimit=59
+                pinglimit=60
                 logmsg(logfile,'debug','checking wether limit has been reached or not for player: '+str(player['UniqueId']))
                 if int(avg_ping)>pinglimit:
                     logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
@@ -291,12 +315,14 @@ def run_srvmon(meta,config):
                 if str(player['TeamId'])!='':
                     logmsg(logfile,'info','player[TeamId]: '+str(player['TeamId']))
 
+                # check if user exists in steamusers
                 logmsg(logfile,'info','checking if user exists in db')
                 query="SELECT * FROM steamusers WHERE steamid64 = %s LIMIT 1"
                 values=[]
                 values.append(str(player['UniqueId']))
                 data=dbquery(query,values)
 
+                # if user does not exist, add user
                 if data['rowcount']==0:
                     logmsg(logfile,'info','adding user to db because not found')
                     query="INSERT INTO steamusers (steamid64) VALUES (%s)"
@@ -306,13 +332,15 @@ def run_srvmon(meta,config):
                 else:
                     logmsg(logfile,'info','steam user already in db: '+str(player['UniqueId']))
 
+                # read steamuser id
                 logmsg(logfile,'info','getting steamusers id from db (to make sure it exists there)')
                 query="SELECT id FROM steamusers WHERE steamid64=%s LIMIT 1"
                 values=[]
                 values.append(str(player['UniqueId']))
                 data=dbquery(query,values)
-                steamuserid=data['rows'][0][0]
+                steamuser_id=data['rows'][0]['id']
 
+                # add stats for user
                 logmsg(logfile,'info','adding stats for user')
                 timestamp=datetime.now(timezone.utc)            
                 query="INSERT INTO stats ("
@@ -320,10 +348,11 @@ def run_srvmon(meta,config):
                 query+="gamemode,matchended,teams,team0score,team1score,timestamp"
                 query+=") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                 values=[
-                    steamuserid,kills,deaths,average,score,ping,serverinfo['ServerName'],serverinfo['PlayerCount'],
+                    steamuser_id,kills,deaths,average,score,ping,serverinfo['ServerName'],serverinfo['PlayerCount'],
                     serverinfo['MapLabel'],serverinfo['GameMode'],serverinfo['MatchEnded'],serverinfo['Teams'],
                     serverinfo['Team0Score'],serverinfo['Team1Score'],timestamp]
                 data=dbquery(query,values)
+
             logmsg(logfile,'info','processed all current players')
         else:
             logmsg(logfile,'info','not pulling stats')
@@ -371,7 +400,7 @@ def run_srvmon(meta,config):
                     case 'Starting':
                         asyncio.run(action_serverinfo())
                     case 'Started':
-                        asyncio.run(action_autokickhighping())
+                        #asyncio.run(action_autokickhighping())
                         asyncio.run(action_autopin())
                     case 'StandBy':
                         asyncio.run(action_autokickhighping())
