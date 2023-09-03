@@ -193,9 +193,10 @@ def run_srvmon(meta,config):
         logmsg(logfile,'info','action_autokickhighping called')
         data=await rcon('InspectAll',{})
         inspectlist=data['InspectList']
+        logmsg(logfile,'debug','inspectlist: '+str(inspectlist))
 
         for player in inspectlist:
-            logmsg(logfile,'debug','searching for other entries for this player in pings db')
+            logmsg(logfile,'debug','searching for other entries for this player ('+str(player['UniqueId'])+') in pings db')
 
             query="SELECT steamid64,ping,"
             query+="AVG(ping) as avg_ping,"
