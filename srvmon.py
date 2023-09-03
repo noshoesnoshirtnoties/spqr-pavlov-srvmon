@@ -194,9 +194,15 @@ def run_srvmon(meta,config):
         data=await rcon('InspectAll',{})
         inspectlist=data['InspectList']
         logmsg(logfile,'debug','inspectlist: '+str(inspectlist))
+        pinglimit=60
+        minentries=5
 
         for player in inspectlist:
-            logmsg(logfile,'debug','searching for other entries for this player ('+str(player['UniqueId'])+') in pings db')
+            steamusers_id=player['UniqueId']
+            current_ping=player['Ping']
+            delete_data=False
+
+            logmsg(logfile,'debug','checking players entries in pings db')
 
             query="SELECT steamid64,ping,"
             query+="AVG(ping) as avg_ping,"
@@ -206,7 +212,7 @@ def run_srvmon(meta,config):
             query+="FROM pings "
             query+="WHERE steamid64 = %s"
             values=[]
-            values.append(str(player['UniqueId']))
+            values.append(steamusers_id)
             data=dbquery(query,values)
 
             avg_ping=data['rows'][0]['avg_ping']
@@ -216,38 +222,36 @@ def run_srvmon(meta,config):
             logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
             logmsg(logfile,'debug','min_ping: '+str(min_ping))
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
-            logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(player['UniqueId']))
+            logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(steamusers_id))
 
-            delete_data=False
-            minentries=10
             if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
                 logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
-                pinglimit=60
-                logmsg(logfile,'debug','checking wether limit has been reached or not for player: '+str(player['UniqueId']))
+                logmsg(logfile,'debug','checking wether limit has been reached or not for player: '+str(steamusers_id))
                 if int(avg_ping)>pinglimit:
-                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
-                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') min ping: '+str(int(min_ping)))
-                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') max ping: '+str(int(max_ping)))
-                    await rcon('Kick',{str(player['UniqueId'])})
+                    logmsg(logfile,'info','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'info','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
+                    logmsg(logfile,'info','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
+                    await rcon('Kick',{steamusers_id})
+                    logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked')
                     delete_data=True
                 else:
-                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
-                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') min ping: '+str(int(min_ping)))
-                    logmsg(logfile,'info','players ('+str(player['UniqueId'])+') max ping: '+str(int(max_ping)))
-                if cnt_ping>=100:
+                    logmsg(logfile,'info','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'info','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
+                    logmsg(logfile,'info','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
+                if cnt_ping>=(minentries*10):
                     delete_data=True
             else:
                 logmsg(logfile,'debug','not enough data on pings yet')
 
-            if str(player['Ping'])=='0': # not sure yet what these are
+            if str(current_ping)=='0': # not sure yet what these are
                 logmsg(logfile,'debug','ping is 0 - now set to 1234 for debugging purposes')
-                player['Ping']=1234
+                current_ping=1234
 
             if delete_data:
                 logmsg(logfile,'debug','deleting entries for player in pings db')
                 query="DELETE FROM pings WHERE steamid64 = %s"
                 values=[]
-                values.append(str(player['UniqueId']))
+                values.append(steamusers_id)
                 dbquery(query,values)
             else:
                 logmsg(logfile,'debug','adding entry for user in pings db')
@@ -255,7 +259,7 @@ def run_srvmon(meta,config):
                 query="INSERT INTO pings ("
                 query+="steamid64,ping,timestamp"
                 query+=") VALUES (%s,%s,%s)"
-                values=[str(player['UniqueId']),player['Ping'],timestamp]
+                values=[steamusers_id,current_ping,timestamp]
                 dbquery(query,values)
 
     # pull stats
