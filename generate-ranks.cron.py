@@ -81,7 +81,7 @@ if __name__ == '__main__':
             values=[]
             values.append(steamuser_id)
             player_all_stats=dbquery(query,values)
-            print('[DEBUG] player_all_stats: '+str(player_all_stats))
+            #print('[DEBUG] player_all_stats: '+str(player_all_stats))
 
             #limit_stats=6 # 2 matches with 3 maps
             limit_stats=3   # for debugging
@@ -126,10 +126,14 @@ if __name__ == '__main__':
                 # prevent divison by 0
                 if int(all_max_score)==0: all_max_score=1
                 if float(all_max_average)==0: all_max_average=1
+                print('[DEBUG] all_max_score: '+str(all_max_score))
+                print('[DEBUG] all_max_average: '+str(all_max_average))
 
-                # get relative values for sub-ranks (to all spqr players)
+                # get relative values (to all spqr players)
                 relative_score=10*player_max_score/all_max_score
                 relative_average=10*player_max_average/all_max_average
+                print('[DEBUG] relative_score: '+str(relative_score))
+                print('[DEBUG] relative_average: '+str(relative_average))
 
                 # define weighting between sub-ranks
                 score_weighting_factor=0.8
@@ -138,6 +142,8 @@ if __name__ == '__main__':
                 # calc weighted sub-ranks
                 weighted_score_rank=relative_score*score_weighting_factor
                 weighted_average_rank=relative_average*average_weighting_factor
+                print('[DEBUG] weighted_score_rank: '+str(weighted_score_rank))
+                print('[DEBUG] weighted_average_rank: '+str(weighted_average_rank))
 
                 # sum up weighted sub-ranks
                 sum_weighted_subranks=weighted_score_rank+weighted_average_rank
