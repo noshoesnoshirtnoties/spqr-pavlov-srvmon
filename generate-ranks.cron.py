@@ -126,13 +126,23 @@ if __name__ == '__main__':
                 if all_max_score<1: all_max_score=1
                 if all_max_average<1: all_max_average=0.1
 
+                # get relative values for sub-ranks (to all spqr players)
                 relative_score=10*player_max_score/all_max_score
                 relative_average=10*player_max_average/all_max_average
 
-                score_rank=int(relative_score)
-                average_rank=int(relative_average)
+                # define weighting between sub-ranks
+                score_weighting_factor=0.8
+                average_weighting_factor=0.2
 
-                rank=(score_rank+average_rank)/2 # WIP
+                # calc weighted sub-ranks
+                weighted_score_rank=relative_score*score_weighting_factor
+                weighted_average_rank=relative_average*average_weighting_factor
+
+                # sum up weighted sub-ranks
+                sum_weighted_subranks=weighted_score_rank+weighted_average_rank
+
+                # calc final rank
+                rank=int(sum_weighted_subranks)
 
                 # get title
                 if rank<4: title='Bronze'
