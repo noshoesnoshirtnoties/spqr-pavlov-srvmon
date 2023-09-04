@@ -44,7 +44,7 @@ if __name__ == '__main__':
     query+=",MIN(kills) as min_kills,MIN(deaths) as min_deaths,MIN(average) as min_average,MIN(score) as min_score,MIN(ping) as min_ping"
     query+=",MAX(kills) as max_kills,MAX(deaths) as max_deaths,MAX(average) as max_average,MAX(score) as max_score,MAX(ping) as max_ping"
     query+=" FROM stats WHERE gamemode='SND' "
-    #query+="AND matchended IS TRUE AND playercount=10 "   # for debugging
+    query+="AND matchended IS TRUE AND playercount=10 "
     query+="ORDER BY timestamp ASC"
     values=[]
     all_stats=dbquery(query,values)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             query+=",MIN(kills) as min_kills,MIN(deaths) as min_deaths,MIN(average) as min_average,MIN(score) as min_score,MIN(ping) as min_ping"
             query+=",MAX(kills) as max_kills,MAX(deaths) as max_deaths,MAX(average) as max_average,MAX(score) as max_score,MAX(ping) as max_ping"
             query+=" FROM stats WHERE gamemode='SND' AND steamusers_id=%s "
-            #query+="AND matchended IS TRUE AND playercount=10 "   # for debugging
+            query+="AND matchended IS TRUE AND playercount=10 "
             query+="ORDER BY timestamp ASC"
             values=[]
             values.append(steamuser_id)
@@ -76,15 +76,14 @@ if __name__ == '__main__':
             print('[DEBUG] player_stats: '+str(player_stats))
 
             query="SELECT id FROM stats WHERE gamemode='SND' AND steamusers_id=%s "
-            #query+="AND matchended IS TRUE AND playercount=10 "   # for debugging
+            query+="AND matchended IS TRUE AND playercount=10 "
             query+="ORDER BY timestamp ASC"
             values=[]
             values.append(steamuser_id)
             player_all_stats=dbquery(query,values)
             #print('[DEBUG] player_all_stats: '+str(player_all_stats))
 
-            #limit_stats=6 # 2 matches with 3 maps
-            limit_stats=3   # for debugging
+            limit_stats=6 # 2 matches with 3 maps
             if player_all_stats['rowcount']>limit_stats:
 
                 player_avg_score=player_stats['rows'][0]['avg_score']
