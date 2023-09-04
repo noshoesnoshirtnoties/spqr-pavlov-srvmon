@@ -376,10 +376,10 @@ def run_srvmon(meta,config):
                     case 'Starting':
                         asyncio.run(action_serverinfo())
                     case 'Started':
-                        #asyncio.run(action_autokickhighping())
-                        asyncio.run(action_autopin())
-                    case 'StandBy':
                         asyncio.run(action_autokickhighping())
+                        asyncio.run(action_autopin())
+                    #case 'StandBy':
+                        #asyncio.run(action_autokickhighping())
                     case 'Ended':
                         asyncio.run(action_autokickhighping())
                         asyncio.run(action_pullstats())
