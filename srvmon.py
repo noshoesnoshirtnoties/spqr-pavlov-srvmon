@@ -92,7 +92,7 @@ def run_srvmon(meta,config):
             data['rows']=False
         cursor.close()
         conn.close()
-        #print('[DEBUG] conn and conn closed')
+        #print('[DEBUG] conn and cursor closed')
         return data
 
     async def rcon(rconcmd,rconparams):

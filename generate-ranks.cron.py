@@ -8,17 +8,17 @@ if __name__ == '__main__':
     config = json.loads(open('config.json').read())[env]
 
     def dbquery(query,values):
-        print('[DEBUG] dbquery called')
-        print('[DEBUG] query: '+str(query))
-        print('[DEBUG] values: '+str(values))
-        print('[DEBUG] len(values): '+str(len(values)))
+        #print('[DEBUG] dbquery called')
+        #print('[DEBUG] query: '+str(query))
+        #print('[DEBUG] values: '+str(values))
+        #print('[DEBUG] len(values): '+str(len(values)))
         conn=mysql.connector.connect(
             host=config['mysqlhost'],
             port=config['mysqlport'],
             user=config['mysqluser'],
             password=config['mysqlpass'],
             database=config['mysqldatabase'])
-        print('[DEBUG] conn: '+str(conn))
+        #print('[DEBUG] conn: '+str(conn))
         cursor=conn.cursor(buffered=True,dictionary=True)
         cursor.execute(query,(values))
         conn.commit()
@@ -26,16 +26,16 @@ if __name__ == '__main__':
         data['rowcount']=cursor.rowcount
         query_type0=query.split(' ',2)
         query_type=str(query_type0[0])
-        print('[DEBUG] query_type: '+query_type)
+        #print('[DEBUG] query_type: '+query_type)
 
         if query_type.upper()=="SELECT":
             data['rows']=cursor.fetchall()
-            print('[DEBUG] data[rows]: '+str(data['rows']))
+            #print('[DEBUG] data[rows]: '+str(data['rows']))
         else:
             data['rows']=False
         cursor.close()
         conn.close()
-        print('[DEBUG] conn and conn closed')
+        #print('[DEBUG] conn and cursor closed')
         return data
 
     # get all stats for all users
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     query+=",MIN(kills) as min_kills,MIN(deaths) as min_deaths,MIN(average) as min_average,MIN(score) as min_score,MIN(ping) as min_ping"
     query+=",MAX(kills) as max_kills,MAX(deaths) as max_deaths,MAX(average) as max_average,MAX(score) as max_score,MAX(ping) as max_ping"
     query+=" FROM stats WHERE gamemode='SND' "
-    query+="AND matchended IS TRUE AND playercount=10 "
+    #query+="AND matchended IS TRUE AND playercount=10 "   # for debugging
     query+="ORDER BY timestamp ASC"
     values=[]
     all_stats=dbquery(query,values)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             query+=",MIN(kills) as min_kills,MIN(deaths) as min_deaths,MIN(average) as min_average,MIN(score) as min_score,MIN(ping) as min_ping"
             query+=",MAX(kills) as max_kills,MAX(deaths) as max_deaths,MAX(average) as max_average,MAX(score) as max_score,MAX(ping) as max_ping"
             query+=" FROM stats WHERE gamemode='SND' AND steamusers_id=%s "
-            query+="AND matchended IS TRUE AND playercount=10 "
+            #query+="AND matchended IS TRUE AND playercount=10 "   # for debugging
             query+="ORDER BY timestamp ASC"
             values=[]
             values.append(steamuser_id)
@@ -76,14 +76,15 @@ if __name__ == '__main__':
             print('[DEBUG] player_stats: '+str(player_stats))
 
             query="SELECT id FROM stats WHERE gamemode='SND' AND steamusers_id=%s "
-            query+="AND matchended IS TRUE AND playercount=10 "
+            #query+="AND matchended IS TRUE AND playercount=10 "   # for debugging
             query+="ORDER BY timestamp ASC"
             values=[]
             values.append(steamuser_id)
             player_all_stats=dbquery(query,values)
             print('[DEBUG] player_all_stats: '+str(player_all_stats))
 
-            limit_stats=3
+            #limit_stats=6 # 2 matches with 3 maps
+            limit_stats=3   # for debugging
             if player_all_stats['rowcount']>limit_stats:
 
                 player_avg_score=player_stats['rows'][0]['avg_score']
@@ -123,8 +124,8 @@ if __name__ == '__main__':
                 all_max_ping=all_stats['rows'][0]['max_ping']
 
                 # prevent divison by 0
-                if all_max_score<1: all_max_score=1
-                if all_max_average<1: all_max_average=0.1
+                if int(all_max_score)==0: all_max_score=1
+                if float(all_max_average)==0: all_max_average=1
 
                 # get relative values for sub-ranks (to all spqr players)
                 relative_score=10*player_max_score/all_max_score
