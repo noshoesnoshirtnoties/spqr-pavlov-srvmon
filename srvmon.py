@@ -201,6 +201,7 @@ def run_srvmon(meta,config):
             steamusers_id=player['UniqueId']
             current_ping=player['Ping']
             delete_data=False
+            add_data=True
 
             logmsg(logfile,'debug','checking players entries in pings db')
 
@@ -244,8 +245,8 @@ def run_srvmon(meta,config):
                 logmsg(logfile,'debug','not enough data on pings yet')
 
             if str(current_ping)=='0': # not sure yet what these are
-                logmsg(logfile,'debug','ping is 0 - now set to 1234 for debugging purposes')
-                current_ping=1234
+                add_data=False
+                logmsg(logfile,'debug','ping is 0 - simply gonna ignore this for now')
 
             if delete_data:
                 logmsg(logfile,'debug','deleting entries for player in pings db')
@@ -253,7 +254,8 @@ def run_srvmon(meta,config):
                 values=[]
                 values.append(steamusers_id)
                 dbquery(query,values)
-            else:
+
+            if add_data:
                 logmsg(logfile,'debug','adding entry for user in pings db')
                 timestamp=datetime.now(timezone.utc)            
                 query="INSERT INTO pings ("
