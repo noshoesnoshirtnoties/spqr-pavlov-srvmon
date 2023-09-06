@@ -65,17 +65,12 @@ def run_srvmon(meta,config):
                 logfile.debug(msg)
 
     def dbquery(query,values):
-        #print('[DEBUG] dbquery called')
-        #print('[DEBUG] query: '+str(query))
-        #print('[DEBUG] values: '+str(values))
-        #print('[DEBUG] len(values): '+str(len(values)))
         conn=mysql.connector.connect(
             host=config['mysqlhost'],
             port=config['mysqlport'],
             user=config['mysqluser'],
             password=config['mysqlpass'],
             database=config['mysqldatabase'])
-        #print('[DEBUG] conn: '+str(conn))
         cursor=conn.cursor(buffered=True,dictionary=True)
         cursor.execute(query,(values))
         conn.commit()
@@ -83,29 +78,22 @@ def run_srvmon(meta,config):
         data['rowcount']=cursor.rowcount
         query_type0=query.split(' ',2)
         query_type=str(query_type0[0])
-        #print('[DEBUG] query_type: '+query_type)
 
         if query_type.upper()=="SELECT":
             data['rows']=cursor.fetchall()
-            print('[DEBUG] data[rows]: '+str(data['rows']))
         else:
             data['rows']=False
         cursor.close()
         conn.close()
-        #print('[DEBUG] conn and cursor closed')
         return data
 
     async def rcon(rconcmd,rconparams):
-        logmsg(logfile,'debug','rcon called')
-        logmsg(logfile,'debug','rconcmd: '+str(rconcmd))
-        logmsg(logfile,'debug','rconparams: '+str(rconparams))
         conn=PavlovRCON(config['rconip'],config['rconport'],config['rconpass'])
         for rconparam in rconparams:
             rconcmd+=' '+str(rconparam)
         data=await conn.send(rconcmd)
         data_json=json.dumps(data)
         data=json.loads(data_json)
-        logmsg(logfile,'debug','data: '+str(data))
         await conn.send('Disconnect')
         return data
 
@@ -116,7 +104,6 @@ def run_srvmon(meta,config):
         if data['Successful'] is True:
             if data['ServerInfo']['RoundState']!='Rotating':
                 new_serverinfo=data['ServerInfo']
-                logmsg(logfile,'debug','new_serverinfo: '+str(new_serverinfo))
 
                 # make sure gamemode is uppercase
                 new_serverinfo['GameMode']=new_serverinfo['GameMode'].upper()
@@ -151,12 +138,10 @@ def run_srvmon(meta,config):
                 
                 data['ServerInfo']=new_serverinfo
             else:
-                logmsg(logfile,'debug','get_serverinfo cant complete because map is rotating')
                 data['Successful']=False
                 data['ServerInfo']=False
         else:
             data['ServerInfo']=False
-        logmsg(logfile,'debug','get_serverinfo is returning data now')
         return data
 
     # retrieve and output serverinfo
@@ -208,13 +193,25 @@ def run_srvmon(meta,config):
             else:
                 logmsg(logfile,'warn','cant complete auto-pin because map is rotating')
         else:
-            logmsg(logfile,'warn','get_serverinfo was unsuccessful - not touching pin')
+            logmsg(logfile,'warn','action_autopin was unsuccessful because get_serverinfo failed - not touching pin')
 
     # kick players with high pings
     async def action_autokickhighping():
         logmsg(logfile,'debug','action_autokickhighping called')
-        data=await rcon('InspectAll',{})
-        inspectlist=data['InspectList']
+
+        act_on_breach=False
+        serverinfo=await get_serverinfo()
+        if serverinfo['Successful'] is True:
+            if serverinfo['ServerInfo']['GameMode']=='SND':
+                if serverinfo['ServerInfo']['MatchEnded'] is True:
+                    act_on_breach=True
+            elif serverinfo['ServerInfo']['GameMode']=='TDM':
+                act_on_breach=True
+            elif serverinfo['ServerInfo']['GameMode']=='DM':
+                act_on_breach=True
+                
+        inspectall=await rcon('InspectAll',{})
+        inspectlist=inspectall['InspectList']
         logmsg(logfile,'debug','inspectlist: '+str(inspectlist))
         pinglimit=60
         minentries=5
@@ -236,12 +233,12 @@ def run_srvmon(meta,config):
             query+="WHERE steamid64 = %s"
             values=[]
             values.append(steamusers_id)
-            data=dbquery(query,values)
+            pings=dbquery(query,values)
 
-            avg_ping=data['rows'][0]['avg_ping']
-            min_ping=data['rows'][0]['min_ping']
-            max_ping=data['rows'][0]['max_ping']
-            cnt_ping=data['rows'][0]['cnt_ping']
+            avg_ping=pings['rows'][0]['avg_ping']
+            min_ping=pings['rows'][0]['min_ping']
+            max_ping=pings['rows'][0]['max_ping']
+            cnt_ping=pings['rows'][0]['cnt_ping']
             logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
             logmsg(logfile,'debug','min_ping: '+str(min_ping))
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
@@ -253,9 +250,12 @@ def run_srvmon(meta,config):
                     logmsg(logfile,'warn','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
                     logmsg(logfile,'debug','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
                     logmsg(logfile,'debug','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
-                    await rcon('Kick',{steamusers_id})
-                    logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked')
-                    delete_data=True
+                    if act_on_breach is True:
+                        await rcon('Kick',{steamusers_id})
+                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked')
+                        delete_data=True
+                    else:
+                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') would have been kicked, but this has been canceled')
                 else:
                     logmsg(logfile,'info','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
                     logmsg(logfile,'debug','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
@@ -335,7 +335,7 @@ def run_srvmon(meta,config):
                             logmsg(logfile,'info','steam user already in db: '+str(player['UniqueId']))
 
                         # read steamuser id
-                        logmsg(logfile,'info','getting steamusers id from db (to make sure it exists there)')
+                        logmsg(logfile,'info','getting steamusers id from db')
                         query="SELECT id FROM steamusers WHERE steamid64=%s LIMIT 1"
                         values=[]
                         values.append(str(player['UniqueId']))
