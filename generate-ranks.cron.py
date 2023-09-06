@@ -8,17 +8,12 @@ if __name__ == '__main__':
     config = json.loads(open('config.json').read())[env]
 
     def dbquery(query,values):
-        #print('[DEBUG] dbquery called')
-        #print('[DEBUG] query: '+str(query))
-        #print('[DEBUG] values: '+str(values))
-        #print('[DEBUG] len(values): '+str(len(values)))
         conn=mysql.connector.connect(
             host=config['mysqlhost'],
             port=config['mysqlport'],
             user=config['mysqluser'],
             password=config['mysqlpass'],
             database=config['mysqldatabase'])
-        #print('[DEBUG] conn: '+str(conn))
         cursor=conn.cursor(buffered=True,dictionary=True)
         cursor.execute(query,(values))
         conn.commit()
@@ -26,16 +21,13 @@ if __name__ == '__main__':
         data['rowcount']=cursor.rowcount
         query_type0=query.split(' ',2)
         query_type=str(query_type0[0])
-        #print('[DEBUG] query_type: '+query_type)
 
         if query_type.upper()=="SELECT":
             data['rows']=cursor.fetchall()
-            #print('[DEBUG] data[rows]: '+str(data['rows']))
         else:
             data['rows']=False
         cursor.close()
         conn.close()
-        #print('[DEBUG] conn and cursor closed')
         return data
 
     # get all stats for all users
