@@ -113,80 +113,91 @@ def run_srvmon(meta,config):
         logmsg(logfile,'info','get_serverinfo called')
         data=await rcon('ServerInfo',{})
         serverinfo=data['ServerInfo']
+        logmsg(logfile,'debug','serverinfo: '+str(serverinfo))
 
         # make sure gamemode is uppercase
         serverinfo['GameMode']=serverinfo['GameMode'].upper()
 
-        # demo rec counts as 1 player in SND
-        if serverinfo['GameMode']=="SND":
-            numberofplayers0=serverinfo['PlayerCount'].split('/',2)
-            numberofplayers1=numberofplayers0[0]
-            if int(numberofplayers1)>0: # demo only exists if there is a player?
-                numberofplayers2=(int(numberofplayers1)-1)
+        if serverinfo['RoundState']=='Rotating':
+            data['Successful']=False
+        else:
+            # demo rec counts as 1 player in SND
+            if serverinfo['GameMode']=="SND":
+                numberofplayers0=serverinfo['PlayerCount'].split('/',2)
+                numberofplayers1=numberofplayers0[0]
+                if int(numberofplayers1)>0: # demo only exists if there is a players
+                    numberofplayers2=(int(numberofplayers1)-1)
+                else:
+                    numberofplayers2=(numberofplayers0[0])
+                maxplayers=numberofplayers0[1]
+                numberofplayers=str(numberofplayers2)+'/'+str(maxplayers)
             else:
-                numberofplayers2=(numberofplayers0[0])
-            maxplayers=numberofplayers0[1]
-            numberofplayers=str(numberofplayers2)+'/'+str(maxplayers)
-        else:
-            numberofplayers=serverinfo['PlayerCount']
-        serverinfo['PlayerCount']=numberofplayers
+                numberofplayers=serverinfo['PlayerCount']
+            serverinfo['PlayerCount']=numberofplayers
 
-        # for SND get info if match has ended and which team won if there were teams
-        serverinfo['MatchEnded']=False
-        if serverinfo['GameMode']=="SND" and serverinfo['Teams'] is True:
-            if int(serverinfo['Team0Score'])==10:
-                serverinfo['MatchEnded']=True
-                serverinfo['WinningTeam']='team0'
-            if int(serverinfo['Team1Score'])==10:
-                serverinfo['MatchEnded']=True
-                serverinfo['WinningTeam']='team1'
-        else:
-            serverinfo['Team0Score']=0
-            serverinfo['Team1Score']=0
-        if serverinfo['MatchEnded'] is True:
-            logmsg(logfile,'info','end of match detected')
-            logmsg(logfile,'info','team0score: '+str(serverinfo['Team0Score']))
-            logmsg(logfile,'info','team1score: '+str(serverinfo['Team1Score']))
-
-        return serverinfo
+            # for SND get info if match has ended and which team won
+            serverinfo['MatchEnded']=False
+            serverinfo['WinningTeam']='none'
+            if serverinfo['GameMode']=="SND" and serverinfo['Teams'] is True:
+                if int(serverinfo['Team0Score'])==10:
+                    serverinfo['MatchEnded']=True
+                    serverinfo['WinningTeam']='team0'
+                elif int(serverinfo['Team1Score'])==10:
+                    serverinfo['MatchEnded']=True
+                    serverinfo['WinningTeam']='team1'
+            else:
+                serverinfo['Team0Score']=0
+                serverinfo['Team1Score']=0
+            if serverinfo['MatchEnded'] is True:
+                logmsg(logfile,'info','end of match detected')
+                logmsg(logfile,'info','team0score: '+str(serverinfo['Team0Score']))
+                logmsg(logfile,'info','team1score: '+str(serverinfo['Team1Score']))
+            
+        data['ServerInfo']=serverinfo
+        return data
 
     # retrieve and output serverinfo
     async def action_serverinfo():
         logmsg(logfile,'info','action_serverinfo called')
         serverinfo=await get_serverinfo()
-        logmsg(logfile,'info','srvname:     '+str(serverinfo['ServerName']))
-        logmsg(logfile,'info','playercount: '+str(serverinfo['PlayerCount']))
-        logmsg(logfile,'info','mapugc:      '+str(serverinfo['MapLabel']))
-        logmsg(logfile,'info','gamemode:    '+str(serverinfo['GameMode']))
-        logmsg(logfile,'info','roundstate:  '+str(serverinfo['RoundState']))
-        logmsg(logfile,'info','teams:       '+str(serverinfo['Teams']))
-        if serverinfo['Teams']==True:
-            logmsg(logfile,'info','team0score:  '+str(serverinfo['Team0Score']))
-            logmsg(logfile,'info','team1score:  '+str(serverinfo['Team1Score']))
+        logmsg(logfile,'info','srvname:     '+str(serverinfo['ServerInfo']['ServerName']))
+        logmsg(logfile,'info','playercount: '+str(serverinfo['ServerInfo']['PlayerCount']))
+        logmsg(logfile,'info','mapugc:      '+str(serverinfo['ServerInfo']['MapLabel']))
+        logmsg(logfile,'info','gamemode:    '+str(serverinfo['ServerInfo']['GameMode']))
+        logmsg(logfile,'info','roundstate:  '+str(serverinfo['ServerInfo']['RoundState']))
+        logmsg(logfile,'info','teams:       '+str(serverinfo['ServerInfo']['Teams']))
+        if serverinfo['ServerInfo']['Teams']==True:
+            logmsg(logfile,'info','team0score:  '+str(serverinfo['ServerInfo']['Team0Score']))
+            logmsg(logfile,'info','team1score:  '+str(serverinfo['ServerInfo']['Team1Score']))
 
     # set/unset pin depending on map, playercount and gamemode
     async def action_autopin():
         logmsg(logfile,'info','action_autopin called')
         serverinfo=await get_serverinfo()
+        logmsg(logfile,'info','action_autopin serverinfo: '+str(serverinfo))
 
-        limit=10
-        if serverinfo['GameMode']=="TDM":
-            if serverinfo['MapLabel']=="UGC2814848": # aimmap
-                limit=8
-        elif serverinfo['GameMode']=="DM":
-            if serverinfo['MapLabel']=="UGC3037601": # poolday
-                limit=5
-        playercount_split=serverinfo['PlayerCount'].split('/',2)
-        if (int(playercount_split[0]))>=limit:
-            logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
-            command='SetPin'
-            params={'9678'}
-            data=await rcon(command,params)
+        if serverinfo['Successful'] is True:
+            limit=10
+            if serverinfo['ServerInfo']['GameMode']=="TDM":
+                if serverinfo['ServerInfo']['MapLabel']=="UGC2814848": # aimmap
+                    limit=8
+            elif serverinfo['ServerInfo']['GameMode']=="DM":
+                if serverinfo['ServerInfo']['MapLabel']=="UGC3037601": # poolday
+                    limit=5
+
+            playercount_split=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
+            if (int(playercount_split[0]))>=limit:
+                logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
+                command='SetPin'
+                params={'9678'}
+                data=await rcon(command,params)
+            else:
+                logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
+                command='SetPin'
+                params={''}
+                data=await rcon(command,params)
         else:
-            logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
-            command='SetPin'
-            params={''}
-            data=await rcon(command,params)
+            logmsg(logfile,'info','get_serverinfo was unsuccessful - not touching pin')
 
     # kick players with high pings
     async def action_autokickhighping():
@@ -268,72 +279,80 @@ def run_srvmon(meta,config):
     async def action_pullstats():
         logmsg(logfile,'info','pullstats called')
         serverinfo=await get_serverinfo()
+        logmsg(logfile,'info','pullstats serverinfo: '+str(serverinfo))
 
-        if serverinfo['MatchEnded'] is True and serverinfo['GameMode']=="SND": # only pull stats if match ended and only in SND
-            logmsg(logfile,'info','actually pulling stats now')
-            data=await rcon('InspectAll',{})
-            inspectlist=data['InspectList']
-            for player in inspectlist:
-                kda=player['KDA'].split('/',3)
-                kills=kda[0]
-                deaths=kda[1]
-                average=kda[2]
-                score=player['Score']
-                ping=player['Ping']
+        # only pull stats if match ended, gamemode is SND and state is not rotating
+        if serverinfo['Successful'] is True: 
+            if serverinfo['ServerInfo']['MatchEnded'] is True:
+                if serverinfo['ServerInfo']['GameMode']=="SND":
+                    logmsg(logfile,'info','actually pulling stats now')
+                    data=await rcon('InspectAll',{})
+                    inspectlist=data['InspectList']
+                    for player in inspectlist:
+                        kda=player['KDA'].split('/',3)
+                        kills=kda[0]
+                        deaths=kda[1]
+                        average=kda[2]
+                        score=player['Score']
+                        ping=player['Ping']
 
-                logmsg(logfile,'debug','player: '+str(player))
-                logmsg(logfile,'debug','player[PlayerName]: '+str(player['PlayerName']))
-                logmsg(logfile,'debug','player[UniqueId]: '+str(player['UniqueId']))
-                logmsg(logfile,'debug','player[KDA]: '+str(player['KDA']))
-                logmsg(logfile,'debug','kills: '+str(kills))
-                logmsg(logfile,'debug','deaths: '+str(deaths))
-                logmsg(logfile,'debug','average: '+str(average))
-                logmsg(logfile,'debug','score: '+str(score))
-                logmsg(logfile,'debug','ping: '+str(ping))
-                if str(player['TeamId'])!='':
-                    logmsg(logfile,'info','player[TeamId]: '+str(player['TeamId']))
+                        logmsg(logfile,'debug','player: '+str(player))
+                        logmsg(logfile,'debug','player[PlayerName]: '+str(player['PlayerName']))
+                        logmsg(logfile,'debug','player[UniqueId]: '+str(player['UniqueId']))
+                        logmsg(logfile,'debug','player[KDA]: '+str(player['KDA']))
+                        logmsg(logfile,'debug','kills: '+str(kills))
+                        logmsg(logfile,'debug','deaths: '+str(deaths))
+                        logmsg(logfile,'debug','average: '+str(average))
+                        logmsg(logfile,'debug','score: '+str(score))
+                        logmsg(logfile,'debug','ping: '+str(ping))
+                        if str(player['TeamId'])!='':
+                            logmsg(logfile,'info','player[TeamId]: '+str(player['TeamId']))
 
-                # check if user exists in steamusers
-                logmsg(logfile,'info','checking if user exists in db')
-                query="SELECT * FROM steamusers WHERE steamid64 = %s LIMIT 1"
-                values=[]
-                values.append(str(player['UniqueId']))
-                data=dbquery(query,values)
+                        # check if user exists in steamusers
+                        logmsg(logfile,'info','checking if user exists in db')
+                        query="SELECT * FROM steamusers WHERE steamid64 = %s LIMIT 1"
+                        values=[]
+                        values.append(str(player['UniqueId']))
+                        data=dbquery(query,values)
 
-                # if user does not exist, add user
-                if data['rowcount']==0:
-                    logmsg(logfile,'info','adding user to db because not found')
-                    query="INSERT INTO steamusers (steamid64) VALUES (%s)"
-                    values=[]
-                    values.append(str(player['UniqueId']))
-                    data=dbquery(query,values)
+                        # if user does not exist, add user
+                        if data['rowcount']==0:
+                            logmsg(logfile,'info','adding user to db because not found')
+                            query="INSERT INTO steamusers (steamid64) VALUES (%s)"
+                            values=[]
+                            values.append(str(player['UniqueId']))
+                            data=dbquery(query,values)
+                        else:
+                            logmsg(logfile,'info','steam user already in db: '+str(player['UniqueId']))
+
+                        # read steamuser id
+                        logmsg(logfile,'info','getting steamusers id from db (to make sure it exists there)')
+                        query="SELECT id FROM steamusers WHERE steamid64=%s LIMIT 1"
+                        values=[]
+                        values.append(str(player['UniqueId']))
+                        data=dbquery(query,values)
+                        steamuser_id=data['rows'][0]['id']
+
+                        # add stats for user
+                        logmsg(logfile,'info','adding stats for user')
+                        timestamp=datetime.now(timezone.utc)            
+                        query="INSERT INTO stats ("
+                        query+="steamusers_id,kills,deaths,average,score,ping,servername,playercount,mapugc,"
+                        query+="gamemode,matchended,teams,team0score,team1score,timestamp"
+                        query+=") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                        values=[
+                            steamuser_id,kills,deaths,average,score,ping,serverinfo['ServerInfo']['ServerName'],serverinfo['ServerInfo']['PlayerCount'],
+                            serverinfo['ServerInfo']['MapLabel'],serverinfo['ServerInfo']['GameMode'],serverinfo['ServerInfo']['MatchEnded'],
+                            serverinfo['ServerInfo']['Teams'],serverinfo['ServerInfo']['Team0Score'],serverinfo['ServerInfo']['Team1Score'],timestamp]
+                        data=dbquery(query,values)
+
+                    logmsg(logfile,'info','processed all current players')
                 else:
-                    logmsg(logfile,'info','steam user already in db: '+str(player['UniqueId']))
-
-                # read steamuser id
-                logmsg(logfile,'info','getting steamusers id from db (to make sure it exists there)')
-                query="SELECT id FROM steamusers WHERE steamid64=%s LIMIT 1"
-                values=[]
-                values.append(str(player['UniqueId']))
-                data=dbquery(query,values)
-                steamuser_id=data['rows'][0]['id']
-
-                # add stats for user
-                logmsg(logfile,'info','adding stats for user')
-                timestamp=datetime.now(timezone.utc)            
-                query="INSERT INTO stats ("
-                query+="steamusers_id,kills,deaths,average,score,ping,servername,playercount,mapugc,"
-                query+="gamemode,matchended,teams,team0score,team1score,timestamp"
-                query+=") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-                values=[
-                    steamuser_id,kills,deaths,average,score,ping,serverinfo['ServerName'],serverinfo['PlayerCount'],
-                    serverinfo['MapLabel'],serverinfo['GameMode'],serverinfo['MatchEnded'],serverinfo['Teams'],
-                    serverinfo['Team0Score'],serverinfo['Team1Score'],timestamp]
-                data=dbquery(query,values)
-
-            logmsg(logfile,'info','processed all current players')
+                    logmsg(logfile,'info','not pulling stats because gamemode is not SND')
+            else:
+                logmsg(logfile,'info','not pulling stats because matchend is not True')
         else:
-            logmsg(logfile,'info','not pulling stats')
+            logmsg(logfile,'info','not pulling stats because serverinfo returned unsuccessful')
 
     # decide what to do once a keyword appears
     def process_found_keyword(line,keyword):
