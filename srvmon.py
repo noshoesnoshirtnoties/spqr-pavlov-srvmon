@@ -290,11 +290,21 @@ def run_srvmon(meta,config):
         logmsg(logfile,'debug','action_pullstats called')
         serverinfo=await get_serverinfo()
 
-        # only pull stats if match ended, gamemode is SND and state is not rotating
-        if serverinfo['Successful'] is True: 
+        if serverinfo['Successful'] is True:
+
+            # fix playercount and drop maxplayers
+            numberofplayers0=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
+            numberofplayers1=numberofplayers0[0]
+            numberofplayers=numberofplayers1
+            #if serverinfo['ServerInfo']['GameMode']=="SND":
+            #    if int(numberofplayers1)>0: # demo only exists if there is players
+            #        numberofplayers=(int(numberofplayers1)-1)
+            serverinfo['ServerInfo']['PlayerCount']=numberofplayers
+
+            # only pull stats if match ended, gamemode is SND and state is not rotating
             if serverinfo['ServerInfo']['MatchEnded'] is True:
                 if serverinfo['ServerInfo']['GameMode']=="SND":
-                    logmsg(logfile,'info','actually pulling stats now')
+                    logmsg(logfile,'debug','actually pulling stats now')
                     data=await rcon('InspectAll',{})
                     inspectlist=data['InspectList']
                     for player in inspectlist:
@@ -318,7 +328,7 @@ def run_srvmon(meta,config):
                             logmsg(logfile,'debug','player[TeamId]: '+str(player['TeamId']))
 
                         # check if user exists in steamusers
-                        logmsg(logfile,'info','checking if user exists in db')
+                        logmsg(logfile,'debug','checking if user exists in db')
                         query="SELECT * FROM steamusers WHERE steamid64 = %s LIMIT 1"
                         values=[]
                         values.append(str(player['UniqueId']))
@@ -326,16 +336,16 @@ def run_srvmon(meta,config):
 
                         # if user does not exist, add user
                         if data['rowcount']==0:
-                            logmsg(logfile,'info','adding user to db because not found')
+                            logmsg(logfile,'debug','adding user to db because not found')
                             query="INSERT INTO steamusers (steamid64) VALUES (%s)"
                             values=[]
                             values.append(str(player['UniqueId']))
                             data=dbquery(query,values)
                         else:
-                            logmsg(logfile,'info','steam user already in db: '+str(player['UniqueId']))
+                            logmsg(logfile,'debug','steam user already in db: '+str(player['UniqueId']))
 
                         # read steamuser id
-                        logmsg(logfile,'info','getting steamusers id from db')
+                        logmsg(logfile,'debug','getting steamusers id from db')
                         query="SELECT id FROM steamusers WHERE steamid64=%s LIMIT 1"
                         values=[]
                         values.append(str(player['UniqueId']))
