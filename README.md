@@ -16,12 +16,13 @@ script to monitor the spqr pavlov server, running as systemd service
   * async-pavlov
   * mysql-connector
 
-## todo (aside from finding and fixing bugs)
-* check ping min max
+## todo (aside from finding and fixing bugs and improving the code in general)
+* check code for pullstats in regards to playercount written to db
+* use ping min max in action_autokickhighping
 * generate top ranks and write them to an updated message in #stats
-* extended playerstats
+* extended playerstats (DM + TDM)
   * pull steamusers details
-* ace-detection for playerstats
+  * ace-detection for playerstats
 * create logrotate config for the log file
 * make env (main.py + generate-ranks.cron.py) a param
 * remove requirement to access the server as root (deploy.sh)
