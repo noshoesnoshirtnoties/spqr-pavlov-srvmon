@@ -161,7 +161,7 @@ def run_srvmon(meta,config):
 
     # retrieve and output serverinfo
     async def action_serverinfo():
-        logmsg(logfile,'info','action_serverinfo called')
+        logmsg(logfile,'debug','action_serverinfo called')
         serverinfo=await get_serverinfo()
         if serverinfo['Successful'] is True:
             if serverinfo['ServerInfo']['RoundState']!='Rotating':
@@ -181,7 +181,7 @@ def run_srvmon(meta,config):
 
     # set/unset pin depending on map, playercount and gamemode
     async def action_autopin():
-        logmsg(logfile,'info','action_autopin called')
+        logmsg(logfile,'debug','action_autopin called')
         serverinfo=await get_serverinfo()
 
         if serverinfo['Successful'] is True:
@@ -212,7 +212,7 @@ def run_srvmon(meta,config):
 
     # kick players with high pings
     async def action_autokickhighping():
-        logmsg(logfile,'info','action_autokickhighping called')
+        logmsg(logfile,'debug','action_autokickhighping called')
         data=await rcon('InspectAll',{})
         inspectlist=data['InspectList']
         logmsg(logfile,'debug','inspectlist: '+str(inspectlist))
@@ -287,7 +287,7 @@ def run_srvmon(meta,config):
 
     # pull stats
     async def action_pullstats():
-        logmsg(logfile,'info','action_pullstats called')
+        logmsg(logfile,'debug','action_pullstats called')
         serverinfo=await get_serverinfo()
 
         # only pull stats if match ended, gamemode is SND and state is not rotating
