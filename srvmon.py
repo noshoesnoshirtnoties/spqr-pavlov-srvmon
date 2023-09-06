@@ -379,9 +379,8 @@ def run_srvmon(meta,config):
                         asyncio.run(action_serverinfo())
                     case 'Started':
                         asyncio.run(action_autokickhighping())
+                    case 'StandBy':
                         asyncio.run(action_autopin())
-                    #case 'StandBy':
-                        #asyncio.run(action_autokickhighping())
                     case 'Ended':
                         asyncio.run(action_autokickhighping())
                         asyncio.run(action_pullstats())
@@ -433,12 +432,14 @@ def run_srvmon(meta,config):
                 joinuser0=line.split('succeeded: ',2)
                 joinuser=joinuser0[1]
                 logmsg(logfile,'info','join successful for user: '+str(joinuser).strip())
+                asyncio.run(action_autopin())
 
             case 'LogNet: UChannel::Close':
                 leaveuser0=line.split('RemoteAddr: ',2)
                 leaveuser1=leaveuser0[1].split(',',2)
                 leaveuser=leaveuser1[0]
                 logmsg(logfile,'info','user left the server: '+str(leaveuser).strip())
+                asyncio.run(action_autopin())
 
             case '"KillData":':
                 logmsg(logfile,'info','a player died...')
