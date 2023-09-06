@@ -110,94 +110,105 @@ def run_srvmon(meta,config):
         return data
 
     async def get_serverinfo():
-        logmsg(logfile,'info','get_serverinfo called')
+        logmsg(logfile,'debug','get_serverinfo called')
         data=await rcon('ServerInfo',{})
-        serverinfo=data['ServerInfo']
-        logmsg(logfile,'debug','serverinfo: '+str(serverinfo))
 
-        # make sure gamemode is uppercase
-        serverinfo['GameMode']=serverinfo['GameMode'].upper()
+        if data['Successful'] is True:
+            if data['ServerInfo']['RoundState']!='Rotating':
+                new_serverinfo=data['ServerInfo']
+                logmsg(logfile,'debug','new_serverinfo: '+str(new_serverinfo))
 
-        if serverinfo['RoundState']=='Rotating':
-            data['Successful']=False
-        else:
-            # demo rec counts as 1 player in SND
-            if serverinfo['GameMode']=="SND":
-                numberofplayers0=serverinfo['PlayerCount'].split('/',2)
-                numberofplayers1=numberofplayers0[0]
-                if int(numberofplayers1)>0: # demo only exists if there is a players
-                    numberofplayers2=(int(numberofplayers1)-1)
+                # make sure gamemode is uppercase
+                new_serverinfo['GameMode']=new_serverinfo['GameMode'].upper()
+
+                # demo rec counts as 1 player in SND
+                if new_serverinfo['GameMode']=="SND":
+                    numberofplayers0=new_serverinfo['PlayerCount'].split('/',2)
+                    numberofplayers1=numberofplayers0[0]
+                    if int(numberofplayers1)>0: # demo only exists if there is a players
+                        numberofplayers2=(int(numberofplayers1)-1)
+                    else:
+                        numberofplayers2=(numberofplayers0[0])
+                    maxplayers=numberofplayers0[1]
+                    numberofplayers=str(numberofplayers2)+'/'+str(maxplayers)
                 else:
-                    numberofplayers2=(numberofplayers0[0])
-                maxplayers=numberofplayers0[1]
-                numberofplayers=str(numberofplayers2)+'/'+str(maxplayers)
-            else:
-                numberofplayers=serverinfo['PlayerCount']
-            serverinfo['PlayerCount']=numberofplayers
+                    numberofplayers=new_serverinfo['PlayerCount']
+                new_serverinfo['PlayerCount']=numberofplayers
 
-            # for SND get info if match has ended and which team won
-            serverinfo['MatchEnded']=False
-            serverinfo['WinningTeam']='none'
-            if serverinfo['GameMode']=="SND" and serverinfo['Teams'] is True:
-                if int(serverinfo['Team0Score'])==10:
-                    serverinfo['MatchEnded']=True
-                    serverinfo['WinningTeam']='team0'
-                elif int(serverinfo['Team1Score'])==10:
-                    serverinfo['MatchEnded']=True
-                    serverinfo['WinningTeam']='team1'
+                # for SND get info if match has ended and which team won
+                new_serverinfo['MatchEnded']=False
+                new_serverinfo['WinningTeam']='none'
+                if new_serverinfo['GameMode']=="SND" and new_serverinfo['Teams'] is True:
+                    if int(new_serverinfo['Team0Score'])==10:
+                        new_serverinfo['MatchEnded']=True
+                        new_serverinfo['WinningTeam']='team0'
+                    elif int(new_serverinfo['Team1Score'])==10:
+                        new_serverinfo['MatchEnded']=True
+                        new_serverinfo['WinningTeam']='team1'
+                else:
+                    new_serverinfo['Team0Score']=0
+                    new_serverinfo['Team1Score']=0
+                
+                data['ServerInfo']=new_serverinfo
             else:
-                serverinfo['Team0Score']=0
-                serverinfo['Team1Score']=0
-            if serverinfo['MatchEnded'] is True:
-                logmsg(logfile,'info','end of match detected')
-                logmsg(logfile,'info','team0score: '+str(serverinfo['Team0Score']))
-                logmsg(logfile,'info','team1score: '+str(serverinfo['Team1Score']))
-            
-        data['ServerInfo']=serverinfo
+                logmsg(logfile,'debug','get_serverinfo cant complete because map is rotating')
+                data['Successful']=False
+                data['ServerInfo']=False
+        else:
+            data['ServerInfo']=False
+        logmsg(logfile,'debug','get_serverinfo is returning data now')
         return data
 
     # retrieve and output serverinfo
     async def action_serverinfo():
         logmsg(logfile,'info','action_serverinfo called')
         serverinfo=await get_serverinfo()
-        logmsg(logfile,'info','srvname:     '+str(serverinfo['ServerInfo']['ServerName']))
-        logmsg(logfile,'info','playercount: '+str(serverinfo['ServerInfo']['PlayerCount']))
-        logmsg(logfile,'info','mapugc:      '+str(serverinfo['ServerInfo']['MapLabel']))
-        logmsg(logfile,'info','gamemode:    '+str(serverinfo['ServerInfo']['GameMode']))
-        logmsg(logfile,'info','roundstate:  '+str(serverinfo['ServerInfo']['RoundState']))
-        logmsg(logfile,'info','teams:       '+str(serverinfo['ServerInfo']['Teams']))
-        if serverinfo['ServerInfo']['Teams']==True:
-            logmsg(logfile,'info','team0score:  '+str(serverinfo['ServerInfo']['Team0Score']))
-            logmsg(logfile,'info','team1score:  '+str(serverinfo['ServerInfo']['Team1Score']))
+        if serverinfo['Successful'] is True:
+            if serverinfo['ServerInfo']['RoundState']!='Rotating':
+                logmsg(logfile,'info','srvname:     '+str(serverinfo['ServerInfo']['ServerName']))
+                logmsg(logfile,'info','playercount: '+str(serverinfo['ServerInfo']['PlayerCount']))
+                logmsg(logfile,'info','mapugc:      '+str(serverinfo['ServerInfo']['MapLabel']))
+                logmsg(logfile,'info','gamemode:    '+str(serverinfo['ServerInfo']['GameMode']))
+                logmsg(logfile,'info','roundstate:  '+str(serverinfo['ServerInfo']['RoundState']))
+                logmsg(logfile,'info','teams:       '+str(serverinfo['ServerInfo']['Teams']))
+                if serverinfo['ServerInfo']['Teams']==True:
+                    logmsg(logfile,'info','team0score:  '+str(serverinfo['ServerInfo']['Team0Score']))
+                    logmsg(logfile,'info','team1score:  '+str(serverinfo['ServerInfo']['Team1Score']))
+            else:
+                logmsg(logfile,'warn','cant complete serverinfo because map is rotating')
+        else:
+            logmsg(logfile,'warn','get_serverinfo returned unsuccessful')
 
     # set/unset pin depending on map, playercount and gamemode
     async def action_autopin():
         logmsg(logfile,'info','action_autopin called')
         serverinfo=await get_serverinfo()
-        logmsg(logfile,'info','action_autopin serverinfo: '+str(serverinfo))
 
         if serverinfo['Successful'] is True:
-            limit=10
-            if serverinfo['ServerInfo']['GameMode']=="TDM":
-                if serverinfo['ServerInfo']['MapLabel']=="UGC2814848": # aimmap
-                    limit=8
-            elif serverinfo['ServerInfo']['GameMode']=="DM":
-                if serverinfo['ServerInfo']['MapLabel']=="UGC3037601": # poolday
-                    limit=5
+            if serverinfo['ServerInfo']['RoundState']!='Rotating':
+                limit=10
+                if serverinfo['ServerInfo']['GameMode']=="TDM":
+                    if serverinfo['ServerInfo']['MapLabel']=="UGC2814848": # aimmap
+                        limit=8
+                elif serverinfo['ServerInfo']['GameMode']=="DM":
+                    if serverinfo['ServerInfo']['MapLabel']=="UGC3037601": # poolday
+                        limit=5
 
-            playercount_split=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
-            if (int(playercount_split[0]))>=limit:
-                logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
-                command='SetPin'
-                params={'9678'}
-                data=await rcon(command,params)
+                playercount_split=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
+                if (int(playercount_split[0]))>=limit:
+                    logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
+                    command='SetPin'
+                    params={'9678'}
+                    data=await rcon(command,params)
+                else:
+                    logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
+                    command='SetPin'
+                    params={''}
+                    data=await rcon(command,params)
             else:
-                logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
-                command='SetPin'
-                params={''}
-                data=await rcon(command,params)
+                logmsg(logfile,'warn','cant complete auto-pin because map is rotating')
         else:
-            logmsg(logfile,'info','get_serverinfo was unsuccessful - not touching pin')
+            logmsg(logfile,'warn','get_serverinfo was unsuccessful - not touching pin')
 
     # kick players with high pings
     async def action_autokickhighping():
@@ -214,7 +225,7 @@ def run_srvmon(meta,config):
             delete_data=False
             add_data=True
 
-            logmsg(logfile,'debug','checking players entries in pings db')
+            logmsg(logfile,'info','checking entries in pings db for player: '+str(steamusers_id))
 
             query="SELECT steamid64,ping,"
             query+="AVG(ping) as avg_ping,"
@@ -234,22 +245,21 @@ def run_srvmon(meta,config):
             logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
             logmsg(logfile,'debug','min_ping: '+str(min_ping))
             logmsg(logfile,'debug','max_ping: '+str(max_ping))
-            logmsg(logfile,'debug','found '+str(cnt_ping)+' entries for player: '+str(steamusers_id))
+            logmsg(logfile,'debug','cnt_ping: '+str(cnt_ping))
 
             if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
                 logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
-                logmsg(logfile,'debug','checking wether limit has been reached or not for player: '+str(steamusers_id))
                 if int(avg_ping)>pinglimit:
-                    logmsg(logfile,'info','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
-                    logmsg(logfile,'info','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
-                    logmsg(logfile,'info','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
+                    logmsg(logfile,'warn','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
+                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
+                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
                     await rcon('Kick',{steamusers_id})
                     logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked')
                     delete_data=True
                 else:
                     logmsg(logfile,'info','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
-                    logmsg(logfile,'info','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
-                    logmsg(logfile,'info','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
+                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
+                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
                 if cnt_ping>=(minentries*10):
                     delete_data=True
             else:
@@ -257,7 +267,7 @@ def run_srvmon(meta,config):
 
             if str(current_ping)=='0': # not sure yet what these are
                 add_data=False
-                logmsg(logfile,'debug','ping is 0 - simply gonna ignore this for now')
+                logmsg(logfile,'warn','ping is 0 - simply gonna ignore this for now')
 
             if delete_data:
                 logmsg(logfile,'debug','deleting entries for player in pings db')
@@ -277,9 +287,8 @@ def run_srvmon(meta,config):
 
     # pull stats
     async def action_pullstats():
-        logmsg(logfile,'info','pullstats called')
+        logmsg(logfile,'info','action_pullstats called')
         serverinfo=await get_serverinfo()
-        logmsg(logfile,'info','pullstats serverinfo: '+str(serverinfo))
 
         # only pull stats if match ended, gamemode is SND and state is not rotating
         if serverinfo['Successful'] is True: 
@@ -306,7 +315,7 @@ def run_srvmon(meta,config):
                         logmsg(logfile,'debug','score: '+str(score))
                         logmsg(logfile,'debug','ping: '+str(ping))
                         if str(player['TeamId'])!='':
-                            logmsg(logfile,'info','player[TeamId]: '+str(player['TeamId']))
+                            logmsg(logfile,'debug','player[TeamId]: '+str(player['TeamId']))
 
                         # check if user exists in steamusers
                         logmsg(logfile,'info','checking if user exists in db')
@@ -348,11 +357,11 @@ def run_srvmon(meta,config):
 
                     logmsg(logfile,'info','processed all current players')
                 else:
-                    logmsg(logfile,'info','not pulling stats because gamemode is not SND')
+                    logmsg(logfile,'warn','not pulling stats because gamemode is not SND')
             else:
-                logmsg(logfile,'info','not pulling stats because matchend is not True')
+                logmsg(logfile,'warn','not pulling stats because matchend is not True')
         else:
-            logmsg(logfile,'info','not pulling stats because serverinfo returned unsuccessful')
+            logmsg(logfile,'warn','not pulling stats because serverinfo returned unsuccessful')
 
     # decide what to do once a keyword appears
     def process_found_keyword(line,keyword):
