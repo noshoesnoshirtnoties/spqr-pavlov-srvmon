@@ -311,7 +311,7 @@ def run_srvmon(meta,config):
                         kda=player['KDA'].split('/',3)
                         kills=kda[0]
                         deaths=kda[1]
-                        average=kda[2]
+                        assists=kda[2]
                         score=player['Score']
                         ping=player['Ping']
 
@@ -321,7 +321,7 @@ def run_srvmon(meta,config):
                         logmsg(logfile,'debug','player[KDA]: '+str(player['KDA']))
                         logmsg(logfile,'debug','kills: '+str(kills))
                         logmsg(logfile,'debug','deaths: '+str(deaths))
-                        logmsg(logfile,'debug','average: '+str(average))
+                        logmsg(logfile,'debug','assists: '+str(assists))
                         logmsg(logfile,'debug','score: '+str(score))
                         logmsg(logfile,'debug','ping: '+str(ping))
                         if str(player['TeamId'])!='':
@@ -356,11 +356,11 @@ def run_srvmon(meta,config):
                         logmsg(logfile,'info','adding stats for user')
                         timestamp=datetime.now(timezone.utc)            
                         query="INSERT INTO stats ("
-                        query+="steamusers_id,kills,deaths,average,score,ping,servername,playercount,mapugc,"
+                        query+="steamusers_id,kills,deaths,assists,score,ping,servername,playercount,mapugc,"
                         query+="gamemode,matchended,teams,team0score,team1score,timestamp"
                         query+=") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                         values=[
-                            steamuser_id,kills,deaths,average,score,ping,serverinfo['ServerInfo']['ServerName'],serverinfo['ServerInfo']['PlayerCount'],
+                            steamuser_id,kills,deaths,assists,score,ping,serverinfo['ServerInfo']['ServerName'],serverinfo['ServerInfo']['PlayerCount'],
                             serverinfo['ServerInfo']['MapLabel'],serverinfo['ServerInfo']['GameMode'],serverinfo['ServerInfo']['MatchEnded'],
                             serverinfo['ServerInfo']['Teams'],serverinfo['ServerInfo']['Team0Score'],serverinfo['ServerInfo']['Team1Score'],timestamp]
                         data=dbquery(query,values)

@@ -28,7 +28,7 @@ CREATE TABLE stats (
   steamusers_id INT NOT NULL,
   kills INT NOT NULL,
   deaths INT NOT NULL,
-  average FLOAT NOT NULL,
+  assists INT NOT NULL,
   score INT NOT NULL,
   ping FLOAT NOT NULL,
   servername VARCHAR(255) NOT NULL,
