@@ -144,7 +144,7 @@ if __name__ == '__main__':
                 sum_weighted_subranks=weighted_score_rank+weighted_kdr_rank
 
                 # calc final rank
-                rank=int(sum_weighted_subranks)
+                rank=int(sum_weighted_subranks)/2
 
                 # get title
                 if rank<4: title='Bronze'
