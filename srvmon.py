@@ -173,11 +173,9 @@ def run_srvmon(meta,config):
             if serverinfo['ServerInfo']['RoundState']!='Rotating':
                 limit=10
                 if serverinfo['ServerInfo']['GameMode']=="TDM":
-                    if serverinfo['ServerInfo']['MapLabel']=="UGC2814848": # aimmap
-                        limit=8
+                    limit=8
                 elif serverinfo['ServerInfo']['GameMode']=="DM":
-                    if serverinfo['ServerInfo']['MapLabel']=="UGC3037601": # poolday
-                        limit=5
+                    limit=5
 
                 playercount_split=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
                 if (int(playercount_split[0]))>=limit:
