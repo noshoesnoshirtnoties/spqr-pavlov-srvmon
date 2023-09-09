@@ -10,6 +10,8 @@ import mysql.connector
 from datetime import datetime,timezone
 
 def run_srvmon(meta,config):
+
+    # keywords to match the log lines with
     keywords=[
         'Rotating map',
         'LogLoad: LoadMap',
@@ -40,6 +42,7 @@ def run_srvmon(meta,config):
         '"Player":',
         '"BombInteraction":']
 
+    # init logging
     if bool(config['debug'])==True:
         level=logging.DEBUG
     else:
@@ -52,6 +55,7 @@ def run_srvmon(meta,config):
         level=level)
     logfile=logging.getLogger('logfile')
 
+    # log function
     def logmsg(logfile,lvl,msg):
         lvl=lvl.lower()
         match lvl:
@@ -64,6 +68,7 @@ def run_srvmon(meta,config):
             case _:
                 logfile.debug(msg)
 
+    # mysql/mariadb query function
     def dbquery(query,values):
         conn=mysql.connector.connect(
             host=config['mysqlhost'],
@@ -87,6 +92,7 @@ def run_srvmon(meta,config):
         conn.close()
         return data
 
+    # rcon function
     async def rcon(rconcmd,rconparams):
         conn=PavlovRCON(config['rconip'],config['rconport'],config['rconpass'])
         for rconparam in rconparams:
@@ -97,11 +103,16 @@ def run_srvmon(meta,config):
         await conn.send('Disconnect')
         return data
 
+    # get wrapper for rcon serverinfo
     async def get_serverinfo():
         logmsg(logfile,'debug','get_serverinfo called')
+
+        # get the serverinfo data
         data=await rcon('ServerInfo',{})
 
         if data['Successful'] is True:
+
+            # unless during rotation, analyze and if necessary modify serverinfo before returning it
             if data['ServerInfo']['RoundState']!='Rotating':
                 new_serverinfo=data['ServerInfo']
 
@@ -147,8 +158,11 @@ def run_srvmon(meta,config):
     # retrieve and output serverinfo
     async def action_serverinfo():
         logmsg(logfile,'debug','action_serverinfo called')
+
         serverinfo=await get_serverinfo()
         if serverinfo['Successful'] is True:
+
+            # unless during rotation, output server info to log
             if serverinfo['ServerInfo']['RoundState']!='Rotating':
                 logmsg(logfile,'info','srvname:     '+str(serverinfo['ServerInfo']['ServerName']))
                 logmsg(logfile,'info','playercount: '+str(serverinfo['ServerInfo']['PlayerCount']))
@@ -167,9 +181,11 @@ def run_srvmon(meta,config):
     # set/unset pin depending on map, playercount and gamemode
     async def action_autopin():
         logmsg(logfile,'debug','action_autopin called')
-        serverinfo=await get_serverinfo()
 
+        serverinfo=await get_serverinfo()
         if serverinfo['Successful'] is True:
+
+            # unless during rotation, set playercount limit depending on gamemode
             if serverinfo['ServerInfo']['RoundState']!='Rotating':
                 limit=10
                 if serverinfo['ServerInfo']['GameMode']=="TDM":
@@ -177,14 +193,15 @@ def run_srvmon(meta,config):
                 elif serverinfo['ServerInfo']['GameMode']=="DM":
                     limit=5
 
+                # decide wether to set the pin or remove it
                 playercount_split=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
                 if (int(playercount_split[0]))>=limit:
-                    logmsg(logfile,'info','limit ('+str(limit)+') reached - setting pin 9678')
+                    logmsg(logfile,'debug','limit ('+str(limit)+') reached - setting pin 9678')
                     command='SetPin'
                     params={'9678'}
                     data=await rcon(command,params)
                 else:
-                    logmsg(logfile,'info','below limit ('+str(limit)+') - removing pin')
+                    logmsg(logfile,'debug','below limit ('+str(limit)+') - removing pin')
                     command='SetPin'
                     params={''}
                     data=await rcon(command,params)
@@ -197,7 +214,15 @@ def run_srvmon(meta,config):
     async def action_autokickhighping():
         logmsg(logfile,'debug','action_autokickhighping called')
 
+        hard_limit=80
+        soft_limit=60
+        delta_limit=30
+        min_entries=5
+        del_entries=min_entries*5
+        keep_entries=10
         act_on_breach=False
+
+        # check gamemode and roundstate in snd
         serverinfo=await get_serverinfo()
         if serverinfo['Successful'] is True:
             if serverinfo['ServerInfo']['GameMode']=='SND':
@@ -208,20 +233,24 @@ def run_srvmon(meta,config):
             elif serverinfo['ServerInfo']['GameMode']=='DM':
                 act_on_breach=True
                 
+        # get the scoreboard for all players
         inspectall=await rcon('InspectAll',{})
         inspectlist=inspectall['InspectList']
         logmsg(logfile,'debug','inspectlist: '+str(inspectlist))
-        pinglimit=60
-        minentries=5
 
+        # go over each players
         for player in inspectlist:
-            steamusers_id=player['UniqueId']
-            current_ping=player['Ping']
+
+            kick_player=False
             delete_data=False
             add_data=True
 
+            steamusers_id=player['UniqueId']
+            current_ping=player['Ping']
+
             logmsg(logfile,'info','checking entries in pings db for player: '+str(steamusers_id))
 
+            # get averages for current player
             query="SELECT steamid64,ping,"
             query+="AVG(ping) as avg_ping,"
             query+="MIN(ping) as min_ping,"
@@ -237,43 +266,58 @@ def run_srvmon(meta,config):
             min_ping=pings['rows'][0]['min_ping']
             max_ping=pings['rows'][0]['max_ping']
             cnt_ping=pings['rows'][0]['cnt_ping']
-            logmsg(logfile,'debug','avg_ping: '+str(avg_ping))
-            logmsg(logfile,'debug','min_ping: '+str(min_ping))
-            logmsg(logfile,'debug','max_ping: '+str(max_ping))
-            logmsg(logfile,'debug','cnt_ping: '+str(cnt_ping))
 
-            if cnt_ping>=minentries: # dont do anything, unless there are >=minentries for a player
-                logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(minentries)+')')
-                if int(avg_ping)>pinglimit:
-                    logmsg(logfile,'warn','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') exceeds the limit ('+str(pinglimit)+')')
-                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
-                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
+            # check if there is enough samples
+            if cnt_ping>=min_entries:
+                logmsg(logfile,'debug','rowcount ('+str(cnt_ping)+') >= minentries ('+str(min_entries)+')')
+
+                # calc min-max-delta
+                min_max_delta=int(max_ping)-int(min_ping)
+
+                # decide wether old entries for this player should be deleted
+                if cnt_ping>=del_entries:
+                    delete_data=True
+
+                # check players avg ping
+                if int(avg_ping)>soft_limit:
+                    kick_player=True
+                    logmsg(logfile,'warn','ping average ('+str(int(avg_ping))+') exceeds the soft limit ('+str(soft_limit)+')')
+                else:
+                    logmsg(logfile,'info','ping average ('+str(int(avg_ping))+') is within soft limit ('+str(soft_limit)+')')
+
+                # check players min-max-delta
+                if int(min_max_delta)>delta_limit:
+                    kick_player=True
+                    logmsg(logfile,'warn','ping min-max-delta ('+str(int(min_max_delta))+') exceeds the delta limit ('+str(delta_limit)+')')
+                else:
+                    logmsg(logfile,'info','ping min-max-delta ('+str(int(min_max_delta))+') is within delta limit ('+str(delta_limit)+')')
+
+                # kick unless canceled
+                if kick_player is True:
                     if act_on_breach is True:
                         await rcon('Kick',{steamusers_id})
                         logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked')
                         delete_data=True
                     else:
-                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') would have been kicked, but this has been canceled')
-                else:
-                    logmsg(logfile,'info','players ('+str(steamusers_id)+') ping average ('+str(int(avg_ping))+') is within limit ('+str(pinglimit)+')')
-                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') min ping: '+str(int(min_ping)))
-                    logmsg(logfile,'debug','players ('+str(steamusers_id)+') max ping: '+str(int(max_ping)))
-                if cnt_ping>=(minentries*10):
-                    delete_data=True
+                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') would have been kicked, but this got canceled')
             else:
                 logmsg(logfile,'debug','not enough data on pings yet')
 
+            # delete accumulated entries (if...), but keep some recent ones
+            if delete_data:
+                logmsg(logfile,'debug','deleting entries for player in pings db')
+                query="DELETE FROM pings WHERE steamid64 = %s ORDER BY id ASC LIMIT %s"
+                values=[]
+                values.append(steamusers_id)
+                values.append(del_entries-keep_entries)
+                dbquery(query,values)
+
+            # remove invalid new samples
             if str(current_ping)=='0': # not sure yet what these are
                 add_data=False
                 logmsg(logfile,'warn','ping is 0 - simply gonna ignore this for now')
 
-            if delete_data:
-                logmsg(logfile,'debug','deleting entries for player in pings db')
-                query="DELETE FROM pings WHERE steamid64 = %s"
-                values=[]
-                values.append(steamusers_id)
-                dbquery(query,values)
-
+            # add the current sample for the current player
             if add_data:
                 logmsg(logfile,'debug','adding entry for user in pings db')
                 timestamp=datetime.now(timezone.utc)            
@@ -290,21 +334,19 @@ def run_srvmon(meta,config):
 
         if serverinfo['Successful'] is True:
 
-            # fix playercount and drop maxplayers
+            # drop maxplayers from playercount
             numberofplayers0=serverinfo['ServerInfo']['PlayerCount'].split('/',2)
-            numberofplayers1=numberofplayers0[0]
-            numberofplayers=numberofplayers1
-            #if serverinfo['ServerInfo']['GameMode']=="SND":
-            #    if int(numberofplayers1)>0: # demo only exists if there is players
-            #        numberofplayers=(int(numberofplayers1)-1)
+            numberofplayers=numberofplayers0[0]
             serverinfo['ServerInfo']['PlayerCount']=numberofplayers
 
             # only pull stats if match ended, gamemode is SND and state is not rotating
             if serverinfo['ServerInfo']['MatchEnded'] is True:
                 if serverinfo['ServerInfo']['GameMode']=="SND":
                     logmsg(logfile,'debug','actually pulling stats now')
-                    data=await rcon('InspectAll',{})
-                    inspectlist=data['InspectList']
+
+                    # pull scoreboard
+                    inspectall=await rcon('InspectAll',{})
+                    inspectlist=inspectall['InspectList']
                     for player in inspectlist:
                         kda=player['KDA'].split('/',3)
                         kills=kda[0]
@@ -330,15 +372,15 @@ def run_srvmon(meta,config):
                         query="SELECT * FROM steamusers WHERE steamid64 = %s LIMIT 1"
                         values=[]
                         values.append(str(player['UniqueId']))
-                        data=dbquery(query,values)
+                        steamusers=dbquery(query,values)
 
                         # if user does not exist, add user
-                        if data['rowcount']==0:
+                        if steamusers['rowcount']==0:
                             logmsg(logfile,'debug','adding user to db because not found')
                             query="INSERT INTO steamusers (steamid64) VALUES (%s)"
                             values=[]
                             values.append(str(player['UniqueId']))
-                            data=dbquery(query,values)
+                            dbquery(query,values)
                         else:
                             logmsg(logfile,'debug','steam user already in db: '+str(player['UniqueId']))
 
@@ -347,8 +389,8 @@ def run_srvmon(meta,config):
                         query="SELECT id FROM steamusers WHERE steamid64=%s LIMIT 1"
                         values=[]
                         values.append(str(player['UniqueId']))
-                        data=dbquery(query,values)
-                        steamuser_id=data['rows'][0]['id']
+                        steamusers=dbquery(query,values)
+                        steamuser_id=steamusers['rows'][0]['id']
 
                         # add stats for user
                         logmsg(logfile,'info','adding stats for user')
@@ -361,7 +403,7 @@ def run_srvmon(meta,config):
                             steamuser_id,kills,deaths,assists,score,ping,serverinfo['ServerInfo']['ServerName'],serverinfo['ServerInfo']['PlayerCount'],
                             serverinfo['ServerInfo']['MapLabel'],serverinfo['ServerInfo']['GameMode'],serverinfo['ServerInfo']['MatchEnded'],
                             serverinfo['ServerInfo']['Teams'],serverinfo['ServerInfo']['Team0Score'],serverinfo['ServerInfo']['Team1Score'],timestamp]
-                        data=dbquery(query,values)
+                        dbquery(query,values)
 
                     logmsg(logfile,'info','processed all current players')
                 else:
@@ -374,16 +416,20 @@ def run_srvmon(meta,config):
     # decide what to do once a keyword appears
     def process_found_keyword(line,keyword):
         match keyword:
+
             case 'Rotating map':
                 logmsg(logfile,'info','map rotation called')
 
             case 'LogLoad: LoadMap':
+
                 if '/Game/Maps/ServerIdle' in line:
                     logmsg(logfile,'info','map switch called')
+
                 elif '/Game/Maps/download.download' in line:
                     mapugc0=line.split('UGC',1)
                     mapugc=('UGC'+str(mapugc0[1]))
                     logmsg(logfile,'info','map is being downloaded: '+str(mapugc).strip())
+
                 elif 'LoadMap: /UGC' in line:
                     mapugc0=line.split('LoadMap: /',1)
                     mapugc1=mapugc0[1].split("/",1)
@@ -391,6 +437,7 @@ def run_srvmon(meta,config):
                     gamemode0=line.split('game=',1)
                     gamemode=gamemode0[1]
                     logmsg(logfile,'info','custom map is loading: '+str(mapugc).strip()+' as '+str(gamemode).strip())
+
                 elif '/Game/Maps' in line:
                     mapugc0=line.split('Maps/',1)
                     mapugc1=mapugc0[1].split("/",1)
@@ -410,6 +457,7 @@ def run_srvmon(meta,config):
                 roundstate1=roundstate0[1].split('"',1)
                 roundstate=roundstate1[0]
                 logmsg(logfile,'info','round state changed to: '+str(roundstate).strip())
+
                 match roundstate:
                     case 'Starting':
                         asyncio.run(action_serverinfo())
