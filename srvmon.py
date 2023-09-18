@@ -215,8 +215,8 @@ def run_srvmon(meta,config):
         logmsg(logfile,'debug','action_autokickhighping called')
 
         hard_limit=80
-        soft_limit=60
-        delta_limit=30
+        soft_limit=70
+        delta_limit=40
         min_entries=5
         del_entries=min_entries*5
         keep_entries=10
