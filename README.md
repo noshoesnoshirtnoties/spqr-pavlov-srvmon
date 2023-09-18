@@ -17,7 +17,7 @@ script to monitor the spqr pavlov server, running as systemd service
   * mysql-connector
 
 ## todo (aside from finding and fixing bugs and improving the code in general)
-* check code for pullstats in regards to playercount written to db
+* check stability/packetloss with auto-kick-high-ping
 * get top ranks and write them to an updated message in #stats
 * add elo/mmr as a (second; at least for now) ranking system
 * extended playerstats (DM + TDM)

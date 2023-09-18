@@ -1,10 +1,11 @@
 #!/bin/bash
 
-VERSION=1.1.0
+VERSION=1.2.0
 SUBJECT=deploy
-USAGE="Usage: $0 -d dsthost -u sshuser -v\n
+USAGE="Usage: $0 -d dsthost -u sshuser -n -v\n
 -d destination host\n
 -u ssh/scp user\n
+-n no cronjob\n
 -v verbose output"
 
 # --- options processing -------------------------------------------
@@ -14,7 +15,7 @@ if [ $# == 0 ] ; then
     exit 1;
 fi
 
-while getopts ":d:u:v" optname
+while getopts ":d:u:n:v" optname
   do
     case "$optname" in
       "v")
@@ -26,6 +27,9 @@ while getopts ":d:u:v" optname
         ;;
       "u")
         SSHUSER=$OPTARG
+        ;;
+      "n")
+        NOCRONJOB=true
         ;;
       "?")
         echo "[ERROR] unknown option $OPTARG - exiting"
@@ -76,7 +80,7 @@ $SSH $DSTHOST "/usr/bin/systemctl stop spqr-pavlov-srvmon.service"
 sleep 3
 
 if [ $VERBOSE ]; then echo "[INFO] installing dependencies"; fi
-$SSH $DSTHOST "sudo su steam -c 'pip install async-pavlov'"
+$SSH $DSTHOST "sudo su steam -c 'pip install async-pavlov mysql-connector'"
 
 if [ $VERBOSE ]; then echo "[INFO] checking if service user exists"; fi
 RESPONSE=$($SSH $DSTHOST "grep '^steam:' /etc/passwd")
@@ -93,8 +97,12 @@ for FILE in "${FILES[@]}"; do
   $SCP "${FILE}" ${SSHUSER}@${DSTHOST}:${SRVMONPATH}/${FILE}
   $SSH $DSTHOST "/usr/bin/chmod 664 ${SRVMONPATH}/${FILE}; /usr/bin/chown ${SRVMONUSER}:${SRVMONUSER} ${SRVMONPATH}/${FILE}"
 done
-$SCP "generate-ranks.cron.sh" "${SSHUSER}@${DSTHOST}:/etc/cron.d/generate-ranks.cron.sh"
-$SSH $DSTHOST "/usr/bin/chmod 775 /etc/cron.d/generate-ranks.cron.sh; /usr/bin/chown steam:steam /etc/cron.d/generate-ranks.cron.sh"
+
+if [ $NOCRONJOB == false ]; then
+  $SCP "generate-ranks.cron.sh" "${SSHUSER}@${DSTHOST}:/etc/cron.d/generate-ranks.cron.sh"
+  $SSH $DSTHOST "/usr/bin/chmod 775 /etc/cron.d/generate-ranks.cron.sh; /usr/bin/chown steam:steam /etc/cron.d/generate-ranks.cron.sh"
+fi
+
 $SCP "spqr-pavlov-srvmon.service" "${SSHUSER}@${DSTHOST}:/etc/systemd/system/spqr-pavlov-srvmon.service"
 $SSH $DSTHOST "/usr/bin/chmod 664 /etc/systemd/system/spqr-pavlov-srvmon.service; /usr/bin/chown root:root /etc/systemd/system/spqr-pavlov-srvmon.service"
 
