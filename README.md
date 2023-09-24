@@ -1,5 +1,7 @@
 # spqr-pavlov-srvmon
-script to monitor the spqr pavlov server, running as systemd service
+script to monitor the spqr pavlov server, running as systemd service.
+
+meant to work in coop with https://github.com/noshoesnoshirtnoties/spqr-servus-publicus
 
 ## usage description
 * clone this repo to your workstation
@@ -18,8 +20,6 @@ script to monitor the spqr pavlov server, running as systemd service
 
 ## todo (aside from finding and fixing bugs and improving the code in general)
 * check stability/packetloss with auto-kick-high-ping
-* get top ranks and write them to an updated message in #stats
-* add elo/mmr as a (second; at least for now) ranking system
 * extended playerstats (DM + TDM)
   * pull steamusers details
   * ace-detection for playerstats

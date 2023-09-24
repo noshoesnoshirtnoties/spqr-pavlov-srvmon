@@ -1,11 +1,10 @@
 #!/bin/bash
 
-VERSION=1.2.0
+VERSION=1.3.0
 SUBJECT=deploy
 USAGE="Usage: $0 -d dsthost -u sshuser -n -v\n
 -d destination host\n
 -u ssh/scp user\n
--n no cronjob\n
 -v verbose output"
 
 # --- options processing -------------------------------------------
@@ -15,7 +14,7 @@ if [ $# == 0 ] ; then
     exit 1;
 fi
 
-while getopts ":d:u:n:v" optname
+while getopts ":d:u:v" optname
   do
     case "$optname" in
       "v")
@@ -27,9 +26,6 @@ while getopts ":d:u:n:v" optname
         ;;
       "u")
         SSHUSER=$OPTARG
-        ;;
-      "n")
-        NOCRONJOB=true
         ;;
       "?")
         echo "[ERROR] unknown option $OPTARG - exiting"
@@ -64,7 +60,6 @@ FILES=(
   "config.json"
   "main.py"
   "srvmon.py"
-  "generate-ranks.cron.py"
 )
 
 if [ ! -n "${DSTHOST}" ]; then
@@ -97,11 +92,6 @@ for FILE in "${FILES[@]}"; do
   $SCP "${FILE}" ${SSHUSER}@${DSTHOST}:${SRVMONPATH}/${FILE}
   $SSH $DSTHOST "/usr/bin/chmod 664 ${SRVMONPATH}/${FILE}; /usr/bin/chown ${SRVMONUSER}:${SRVMONUSER} ${SRVMONPATH}/${FILE}"
 done
-
-if [ $NOCRONJOB == false ]; then
-  $SCP "generate-ranks.cron.sh" "${SSHUSER}@${DSTHOST}:/etc/cron.d/generate-ranks.cron.sh"
-  $SSH $DSTHOST "/usr/bin/chmod 775 /etc/cron.d/generate-ranks.cron.sh; /usr/bin/chown steam:steam /etc/cron.d/generate-ranks.cron.sh"
-fi
 
 $SCP "spqr-pavlov-srvmon.service" "${SSHUSER}@${DSTHOST}:/etc/systemd/system/spqr-pavlov-srvmon.service"
 $SSH $DSTHOST "/usr/bin/chmod 664 /etc/systemd/system/spqr-pavlov-srvmon.service; /usr/bin/chown root:root /etc/systemd/system/spqr-pavlov-srvmon.service"
