@@ -2,7 +2,7 @@ import json
 import srvmon
 
 if __name__ == '__main__':
-    # define env - should be an argument with default value later on
+    # define env
     env='live'
 
     # read meta + config
