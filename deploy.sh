@@ -96,8 +96,8 @@ done
 $SCP "spqr-pavlov-srvmon.service" "${SSHUSER}@${DSTHOST}:/etc/systemd/system/spqr-pavlov-srvmon.service"
 $SSH $DSTHOST "/usr/bin/chmod 644 /etc/systemd/system/spqr-pavlov-srvmon.service; /usr/bin/chown root:root /etc/systemd/system/spqr-pavlov-srvmon.service"
 
-$SCP "spqr-pavlov-srvmon-logrotate" "${SSHUSER}@${DSTHOST}:/etc/logrotate/spqr-pavlov-srvmon-logrotate"
-$SSH $DSTHOST "/usr/bin/chmod 644 /etc/logrotate/spqr-pavlov-srvmon-logrotate; /usr/bin/chown root:root /etc/logrotate/spqr-pavlov-srvmon-logrotate"
+$SCP "spqr-pavlov-srvmon-logrotate" "${SSHUSER}@${DSTHOST}:/etc/logrotate.d/spqr-pavlov-srvmon-logrotate"
+$SSH $DSTHOST "/usr/bin/chmod 644 /etc/logrotate.d/spqr-pavlov-srvmon-logrotate; /usr/bin/chown root:root /etc/logrotate.d/spqr-pavlov-srvmon-logrotate"
 
 if [ $VERBOSE ]; then echo "[INFO] creating empty logfile for service"; fi
 $SSH $DSTHOST "touch ${SRVMONLOG}; /usr/bin/chown ${SRVMONUSER}:${SRVMONUSER} ${SRVMONLOG}"
