@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=1.3.0
+VERSION=1.3.1
 SUBJECT=deploy
 USAGE="Usage: $0 -d dsthost -u sshuser -n -v\n
 -d destination host\n
@@ -94,7 +94,10 @@ for FILE in "${FILES[@]}"; do
 done
 
 $SCP "spqr-pavlov-srvmon.service" "${SSHUSER}@${DSTHOST}:/etc/systemd/system/spqr-pavlov-srvmon.service"
-$SSH $DSTHOST "/usr/bin/chmod 664 /etc/systemd/system/spqr-pavlov-srvmon.service; /usr/bin/chown root:root /etc/systemd/system/spqr-pavlov-srvmon.service"
+$SSH $DSTHOST "/usr/bin/chmod 644 /etc/systemd/system/spqr-pavlov-srvmon.service; /usr/bin/chown root:root /etc/systemd/system/spqr-pavlov-srvmon.service"
+
+$SCP "spqr-pavlov-srvmon-logrotate" "${SSHUSER}@${DSTHOST}:/etc/logrotate/spqr-pavlov-srvmon-logrotate"
+$SSH $DSTHOST "/usr/bin/chmod 644 /etc/logrotate/spqr-pavlov-srvmon-logrotate; /usr/bin/chown root:root /etc/logrotate/spqr-pavlov-srvmon-logrotate"
 
 if [ $VERBOSE ]; then echo "[INFO] creating empty logfile for service"; fi
 $SSH $DSTHOST "touch ${SRVMONLOG}; /usr/bin/chown ${SRVMONUSER}:${SRVMONUSER} ${SRVMONLOG}"

@@ -23,7 +23,6 @@ meant to work in coop with https://github.com/noshoesnoshirtnoties/spqr-servus-p
 * extended playerstats (DM + TDM)
   * pull steamusers details
   * ace-detection for playerstats
-* create logrotate config for the log file
 * make env a param (main.py)
 * zip/unzip files (deploy.sh)
 * remove requirement to access the server as root (deploy.sh)

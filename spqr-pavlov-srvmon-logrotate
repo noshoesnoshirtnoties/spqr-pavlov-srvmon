@@ -1,0 +1,9 @@
+/home/steam/spqr-pavlov-srvmon/spqr-pavlov-srvmon.log {
+  daily
+  missingok
+  rotate 7
+  compress
+  delaycompress
+  notifempty
+  create 0640 steam steam
+}
