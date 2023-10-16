@@ -527,7 +527,7 @@ def run_srvmon(meta,config):
 
             case '"KillData":':
                 logmsg(logfile,'info','a player died...')
-                asyncio.run(action_autokickhighping())
+                #asyncio.run(action_autokickhighping())
 
             case '"Killer":':
                 killer0=line.split('"',4)
@@ -573,7 +573,7 @@ def run_srvmon(meta,config):
 
             case 'BombData':
                 logmsg(logfile,'info','something happened with the bomb')
-                asyncio.run(action_autokickhighping())
+                #asyncio.run(action_autokickhighping())
 
             case '"Player":':
                 bombplayer0=line.split('": "',2)
