@@ -56,8 +56,3 @@ CREATE TABLE pings (
   timestamp DATETIME NOT NULL,
   PRIMARY KEY (id)
 );
-CREATE TABLE events (
-  id INT NOT NULL AUTO_INCREMENT,
-  text VARCHAR(255) NOT NULL,
-  PRIMARY KEY (id)
-);
