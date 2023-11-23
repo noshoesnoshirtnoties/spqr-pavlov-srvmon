@@ -214,12 +214,12 @@ def run_srvmon(meta,config):
     async def action_autokickhighping():
         logmsg(logfile,'debug','action_autokickhighping called')
 
-        hard_limit=80
-        soft_limit=70
+        hard_limit=70
+        soft_limit=50
         delta_limit=40
         min_entries=5
-        del_entries=min_entries*5
-        keep_entries=10
+        del_entries=min_entries*3
+        keep_entries=4
         act_on_breach=False
 
         # check gamemode and roundstate in snd
@@ -280,14 +280,19 @@ def run_srvmon(meta,config):
 
                 # check players avg ping
                 if int(avg_ping)>soft_limit:
-                    kick_player=True
+                    kick_player=False
                     logmsg(logfile,'warn','ping average ('+str(int(avg_ping))+') exceeds the soft limit ('+str(soft_limit)+')')
                 else:
                     logmsg(logfile,'info','ping average ('+str(int(avg_ping))+') is within soft limit ('+str(soft_limit)+')')
+                if int(avg_ping)>hard_limit:
+                    kick_player=True
+                    logmsg(logfile,'warn','ping average ('+str(int(avg_ping))+') exceeds the hard limit ('+str(hard_limit)+')')
+                else:
+                    logmsg(logfile,'info','ping average ('+str(int(avg_ping))+') is within hard limit ('+str(hard_limit)+')')
 
                 # check players min-max-delta
                 if int(min_max_delta)>delta_limit:
-                    kick_player=True
+                    kick_player=False
                     logmsg(logfile,'warn','ping min-max-delta ('+str(int(min_max_delta))+') exceeds the delta limit ('+str(delta_limit)+')')
                 else:
                     logmsg(logfile,'info','ping min-max-delta ('+str(int(min_max_delta))+') is within delta limit ('+str(delta_limit)+')')
@@ -296,10 +301,10 @@ def run_srvmon(meta,config):
                 if kick_player is True:
                     if act_on_breach is True:
                         await rcon('Kick',{steamusers_id})
-                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked')
+                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') has been kicked by autokick-highping')
                         delete_data=True
                     else:
-                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') would have been kicked, but this got canceled')
+                        logmsg(logfile,'warn','player ('+str(steamusers_id)+') would have been kicked by autokick-highping, but this got canceled')
             else:
                 logmsg(logfile,'debug','not enough data on pings yet')
 
